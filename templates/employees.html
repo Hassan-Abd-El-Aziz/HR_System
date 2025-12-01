@@ -1,0 +1,109 @@
+{% extends "base.html" %} {% block title %}إدارة الموظفين - نظام الموارد
+البشرية{% endblock %} {% block content %}
+<div class="page-header">
+  <h1>إدارة الموظفين</h1>
+  <a href="{{ url_for('add_employee') }}" class="btn btn-primary">
+    <i class="fas fa-user-plus"></i> إضافة موظف جديد
+  </a>
+</div>
+
+<div class="filters">
+  <select id="departmentFilter" class="filter-select">
+    <option value="">جميع الأقسام</option>
+    {% for dept in departments %}
+    <option value="{{ dept.id }}">{{ dept.name }}</option>
+    {% endfor %}
+  </select>
+
+  <select id="statusFilter" class="filter-select">
+    <option value="">جميع الحالات</option>
+    <option value="active">نشط</option>
+    <option value="inactive">غير نشط</option>
+  </select>
+
+  <input
+    type="text"
+    id="searchInput"
+    placeholder="بحث في الموظفين..."
+    class="search-input"
+  />
+</div>
+
+<div class="table-container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>رقم الموظف</th>
+        <th>الاسم</th>
+        <th>البريد الإلكتروني</th>
+        <th>القسم</th>
+        <th>الوظيفة</th>
+        <th>الراتب</th>
+        <th>الحالة</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for employee in employees %}
+      <tr
+        data-department="{{ employee.department_id }}"
+        data-status="{{ employee.status }}"
+      >
+        <td>
+          <div class="employee-avatar">
+            {% if employee.profile_picture_url %}
+            <img
+              src="{{ url_for('uploaded_file', filename=employee.profile_picture_url) }}"
+              alt="{{ employee.first_name }} {{ employee.last_name }}"
+              class="employee-thumbnail"
+            />
+            {% else %}
+            <i class="fas fa-user-circle"></i>
+            {% endif %}
+          </div>
+        </td>
+        <td>{{ employee.employee_id }}</td>
+        <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+        <td>{{ employee.email }}</td>
+        <td>{{ employee.department_name }}</td>
+        <td>{{ employee.position }}</td>
+        <td>{{ "{:,.2f}".format(employee.salary) }} ر.س</td>
+        <td>
+          <span class="status-badge status-{{ employee.status }}">
+            {% if employee.status == 'active' %}نشط{% else %}غير نشط{% endif %}
+          </span>
+        </td>
+        <td>
+          <div class="action-buttons">
+            <a
+              href="{{ url_for('edit_employee', employee_id=employee.id) }}"
+              class="btn btn-sm btn-edit"
+              title="تعديل"
+            >
+              <i class="fas fa-edit"></i>
+            </a>
+            <a
+              href="{{ url_for('delete_employee', employee_id=employee.id) }}"
+              class="btn btn-sm btn-delete"
+              onclick="return confirm('هل أنت متأكد من حذف الموظف {{ employee.first_name }} {{ employee.last_name }}؟')"
+              title="حذف"
+            >
+              <i class="fas fa-trash"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<style>
+  .employee-thumbnail {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #3498db;
+  }
+</style>
+{% endblock %}

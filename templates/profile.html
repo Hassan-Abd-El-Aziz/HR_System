@@ -1,0 +1,199 @@
+{% extends "base.html" %} {% block title %}الملف الشخصي - نظام الموارد البشرية{%
+endblock %} {% block content %}
+<div class="form-container">
+  <div class="form-header">
+    <h1><i class="fas fa-user"></i> الملف الشخصي</h1>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-right"></i> العودة للرئيسية
+    </a>
+  </div>
+
+  <div class="profile-card">
+    <div class="profile-header">
+      <div class="profile-avatar">
+        <i class="fas fa-user-circle"></i>
+      </div>
+      <div class="profile-info">
+        <h2>{{ session.username }}</h2>
+        <p>{{ 'مسؤول النظام' if session.role == 'admin' else 'مستخدم' }}</p>
+        <div class="profile-meta">
+          <span class="badge badge-primary">{{ session.role }}</span>
+          <span class="login-time"
+            >آخر دخول: {{ user.last_login.strftime('%Y-%m-%d %H:%M') if user and
+            user.last_login else 'الآن' }}</span
+          >
+        </div>
+      </div>
+    </div>
+
+    {% if user and user.employee_id %}
+    <div class="employee-info">
+      <h3>معلومات الموظف</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">الاسم:</span>
+          <span class="info-value"
+            >{{ user.first_name }} {{ user.last_name }}</span
+          >
+        </div>
+        <div class="info-item">
+          <span class="info-label">الوظيفة:</span>
+          <span class="info-value">{{ user.position }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">القسم:</span>
+          <span class="info-value">{{ user.department_name }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">البريد الإلكتروني:</span>
+          <span class="info-value">{{ user.employee_email }}</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="profile-section">
+      <h3><i class="fas fa-key"></i> تغيير كلمة المرور</h3>
+      <form
+        method="POST"
+        action="{{ url_for('change_password') }}"
+        class="password-form"
+      >
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="current_password">كلمة المرور الحالية</label>
+            <input
+              type="password"
+              id="current_password"
+              name="current_password"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="new_password">كلمة المرور الجديدة</label>
+            <input
+              type="password"
+              id="new_password"
+              name="new_password"
+              required
+              minlength="6"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="confirm_password">تأكيد كلمة المرور</label>
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> تغيير كلمة المرور
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .profile-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #ecf0f1;
+  }
+
+  .profile-avatar {
+    font-size: 4rem;
+    color: #3498db;
+  }
+
+  .profile-info h2 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+  }
+
+  .profile-info p {
+    margin: 0 0 1rem 0;
+    color: #7f8c8d;
+  }
+
+  .profile-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .login-time {
+    color: #95a5a6;
+    font-size: 0.9rem;
+  }
+
+  .employee-info {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+  }
+
+  .employee-info h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+  }
+
+  .profile-section {
+    margin-top: 2rem;
+  }
+
+  .profile-section h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .password-form {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+  }
+</style>
+
+<script>
+  document
+    .querySelector(".password-form")
+    .addEventListener("submit", function (e) {
+      const newPassword = document.getElementById("new_password").value;
+      const confirmPassword = document.getElementById("confirm_password").value;
+
+      if (newPassword !== confirmPassword) {
+        e.preventDefault();
+        alert("كلمة المرور الجديدة غير متطابقة");
+        return false;
+      }
+
+      if (newPassword.length < 6) {
+        e.preventDefault();
+        alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+        return false;
+      }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "base.html" %} {% block title %}موظفو قسم {{ department.name }} -
+نظام الموارد البشرية{% endblock %} {% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-users"></i> موظفو قسم: {{ department.name }}</h1>
+  <div class="header-actions">
+    <a href="{{ url_for('departments') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-right"></i> العودة للأقسام
+    </a>
+    <a
+      href="{{ url_for('edit_department', department_id=department.id) }}"
+      class="btn btn-primary"
+    >
+      <i class="fas fa-edit"></i> تعديل القسم
+    </a>
+  </div>
+</div>
+
+<div class="department-info">
+  <div class="info-card">
+    <h3>معلومات القسم</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">اسم القسم:</span>
+        <span class="info-value">{{ department.name }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">الوصف:</span>
+        <span class="info-value"
+          >{{ department.description or 'لا يوجد وصف' }}</span
+        >
+      </div>
+      <div class="info-item">
+        <span class="info-label">عدد الموظفين:</span>
+        <span class="info-value">{{ employees|length }} موظف</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if employees %}
+<div class="table-container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>رقم الموظف</th>
+        <th>الاسم</th>
+        <th>البريد الإلكتروني</th>
+        <th>الوظيفة</th>
+        <th>الراتب</th>
+        <th>الحالة</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for employee in employees %}
+      <tr>
+        <td>{{ employee.employee_id }}</td>
+        <td>
+          <strong>{{ employee.first_name }} {{ employee.last_name }}</strong>
+        </td>
+        <td>{{ employee.email }}</td>
+        <td>{{ employee.position }}</td>
+        <td>{{ "{:,.2f}".format(employee.salary) }} ر.س</td>
+        <td>
+          <span class="status-badge status-{{ employee.status }}">
+            {% if employee.status == 'active' %}نشط{% else %}غير نشط{% endif %}
+          </span>
+        </td>
+        <td>
+          <div class="action-buttons">
+            <a
+              href="{{ url_for('edit_employee', employee_id=employee.id) }}"
+              class="btn btn-sm btn-edit"
+              title="تعديل"
+            >
+              <i class="fas fa-edit"></i>
+            </a>
+            <a
+              href="{{ url_for('attendance_history', employee_id=employee.id) }}"
+              class="btn btn-sm btn-info"
+              title="سجل الحضور"
+            >
+              <i class="fas fa-history"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="fas fa-users-slash fa-3x"></i>
+  <h3>لا يوجد موظفين في هذا القسم</h3>
+  <p>لم يتم تعيين أي موظفين لهذا القسم بعد.</p>
+  <a href="{{ url_for('employees') }}" class="btn btn-primary">
+    <i class="fas fa-user-plus"></i> إضافة موظفين
+  </a>
+</div>
+{% endif %}
+
+<style>
+  .department-info {
+    margin-bottom: 2rem;
+  }
+
+  .info-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .info-card h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 0.5rem;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f8f9fa;
+  }
+
+  .info-item:last-child {
+    border-bottom: none;
+  }
+
+  .info-label {
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .info-value {
+    color: #6c757d;
+  }
+</style>
+{% endblock %}

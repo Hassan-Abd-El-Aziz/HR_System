@@ -1,0 +1,428 @@
+{% extends "base.html" %} {% block title %}إضافة مستخدم جديد - نظام الموارد
+البشرية{% endblock %} {% block content %}
+<div class="form-container">
+  <div class="form-header">
+    <h1><i class="fas fa-user-plus"></i> إضافة مستخدم جديد</h1>
+    <a href="{{ url_for('users_management') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-right"></i> العودة إلى القائمة
+    </a>
+  </div>
+
+  <form method="POST" class="user-form" id="userForm">
+    <div class="form-section">
+      <h3><i class="fas fa-user-circle"></i> المعلومات الأساسية</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="username">اسم المستخدم *</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            required
+            placeholder="أدخل اسم المستخدم"
+            minlength="3"
+          />
+          <div class="form-error" id="username_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">البريد الإلكتروني *</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            placeholder="أدخل البريد الإلكتروني"
+          />
+          <div class="form-error" id="email_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="role">الصلة *</label>
+          <select id="role" name="role" required>
+            <option value="">اختر الصلاحية</option>
+            <option value="user">مستخدم عادي</option>
+            <option value="manager">مدير</option>
+            <option value="admin">مسؤول</option>
+          </select>
+          <div class="form-help">
+            <small>
+              <strong>مسؤول:</strong> صلاحيات كاملة<br />
+              <strong>مدير:</strong> صلاحيات إدارية محدودة<br />
+              <strong>مستخدم:</strong> صلاحيات أساسية
+            </small>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="employee_id">ربط بموظف</label>
+          <select id="employee_id" name="employee_id">
+            <option value="">اختر موظف (اختياري)</option>
+            {% for employee in available_employees %}
+            <option value="{{ employee.id }}">
+              {{ employee.full_name }} - {{ employee.position }} ({{
+              employee.department_name }})
+            </option>
+            {% endfor %}
+          </select>
+          <div class="form-help">
+            <small>ربط الحساب بموظف محدد لتمكين الميزات الإضافية</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3><i class="fas fa-key"></i> كلمة المرور</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="password">كلمة المرور *</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            minlength="6"
+            placeholder="أدخل كلمة المرور"
+          />
+          <div class="form-error" id="password_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">تأكيد كلمة المرور *</label>
+          <input
+            type="password"
+            id="confirm_password"
+            name="confirm_password"
+            required
+            minlength="6"
+            placeholder="أعد إدخال كلمة المرور"
+          />
+          <div class="form-error" id="confirm_password_error"></div>
+        </div>
+      </div>
+
+      <div class="password-strength">
+        <div class="strength-meter">
+          <div class="strength-bar" id="strengthBar"></div>
+        </div>
+        <div class="strength-text" id="strengthText">قوة كلمة المرور</div>
+      </div>
+
+      <div class="password-requirements">
+        <h4>متطلبات كلمة المرور:</h4>
+        <ul>
+          <li id="reqLength">6 أحرف على الأقل</li>
+          <li id="reqUpper">حرف كبير على الأقل</li>
+          <li id="reqLower">حرف صغير على الأقل</li>
+          <li id="reqNumber">رقم على الأقل</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3><i class="fas fa-cog"></i> الإعدادات</h3>
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="is_active" name="is_active" checked />
+          <label for="is_active">الحساب مفعل</label>
+        </div>
+        <div class="form-help">
+          <small>يمكن تعطيل الحساب مؤقتاً بدلاً من حذفه</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> حفظ المستخدم
+      </button>
+      <button type="reset" class="btn btn-secondary">
+        <i class="fas fa-undo"></i> إعادة تعيين
+      </button>
+      <a href="{{ url_for('users_management') }}" class="btn btn-outline">
+        <i class="fas fa-times"></i> إلغاء
+      </a>
+    </div>
+  </form>
+</div>
+
+<style>
+  .user-form {
+    max-width: 800px;
+  }
+
+  .form-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+  }
+
+  .form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 0.5rem;
+  }
+
+  .form-help {
+    margin-top: 0.5rem;
+  }
+
+  .form-help small {
+    color: #6c757d;
+    line-height: 1.4;
+  }
+
+  .password-strength {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+
+  .strength-meter {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .strength-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+  }
+
+  .strength-text {
+    font-size: 0.9rem;
+    color: #6c757d;
+    text-align: center;
+  }
+
+  .password-requirements {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+  }
+
+  .password-requirements h4 {
+    margin: 0 0 0.5rem 0;
+    color: #495057;
+    font-size: 0.9rem;
+  }
+
+  .password-requirements ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.25rem;
+  }
+
+  .password-requirements li {
+    font-size: 0.8rem;
+    color: #dc3545;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .password-requirements li:before {
+    content: "✗";
+    color: #dc3545;
+  }
+
+  .password-requirements li.valid {
+    color: #28a745;
+  }
+
+  .password-requirements li.valid:before {
+    content: "✓";
+    color: #28a745;
+  }
+
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .checkbox-group label {
+    margin: 0;
+    font-weight: 500;
+    color: #2c3e50;
+  }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const passwordInput = document.getElementById("password");
+    const confirmPasswordInput = document.getElementById("confirm_password");
+    const strengthBar = document.getElementById("strengthBar");
+    const strengthText = document.getElementById("strengthText");
+    const requirements = {
+      length: document.getElementById("reqLength"),
+      upper: document.getElementById("reqUpper"),
+      lower: document.getElementById("reqLower"),
+      number: document.getElementById("reqNumber"),
+    };
+
+    // تحقق من قوة كلمة المرور
+    passwordInput.addEventListener("input", function () {
+      const password = this.value;
+      let strength = 0;
+      let validRequirements = 0;
+
+      // التحقق من الطول
+      if (password.length >= 6) {
+        strength += 25;
+        requirements.length.classList.add("valid");
+        validRequirements++;
+      } else {
+        requirements.length.classList.remove("valid");
+      }
+
+      // التحقق من الأحرف الكبيرة
+      if (/[A-Z]/.test(password)) {
+        strength += 25;
+        requirements.upper.classList.add("valid");
+        validRequirements++;
+      } else {
+        requirements.upper.classList.remove("valid");
+      }
+
+      // التحقق من الأحرف الصغيرة
+      if (/[a-z]/.test(password)) {
+        strength += 25;
+        requirements.lower.classList.add("valid");
+        validRequirements++;
+      } else {
+        requirements.lower.classList.remove("valid");
+      }
+
+      // التحقق من الأرقام
+      if (/[0-9]/.test(password)) {
+        strength += 25;
+        requirements.number.classList.add("valid");
+        validRequirements++;
+      } else {
+        requirements.number.classList.remove("valid");
+      }
+
+      // تحديث شريط القوة
+      strengthBar.style.width = strength + "%";
+
+      // تحديث النص والألوان
+      if (strength === 0) {
+        strengthBar.style.backgroundColor = "#dc3545";
+        strengthText.textContent = "ضعيفة";
+        strengthText.style.color = "#dc3545";
+      } else if (strength <= 50) {
+        strengthBar.style.backgroundColor = "#fd7e14";
+        strengthText.textContent = "متوسطة";
+        strengthText.style.color = "#fd7e14";
+      } else if (strength <= 75) {
+        strengthBar.style.backgroundColor = "#ffc107";
+        strengthText.textContent = "جيدة";
+        strengthText.style.color = "#ffc107";
+      } else {
+        strengthBar.style.backgroundColor = "#28a745";
+        strengthText.textContent = "قوية";
+        strengthText.style.color = "#28a745";
+      }
+
+      // التحقق من تطابق كلمتي المرور
+      validatePasswordMatch();
+    });
+
+    // التحقق من تطابق كلمتي المرور
+    confirmPasswordInput.addEventListener("input", validatePasswordMatch);
+
+    function validatePasswordMatch() {
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      const errorElement = document.getElementById("confirm_password_error");
+
+      if (confirmPassword && password !== confirmPassword) {
+        errorElement.textContent = "كلمة المرور غير متطابقة";
+        errorElement.style.display = "block";
+        return false;
+      } else {
+        errorElement.style.display = "none";
+        return true;
+      }
+    }
+
+    // التحقق من النموذج قبل الإرسال
+    document
+      .getElementById("userForm")
+      .addEventListener("submit", function (e) {
+        let isValid = true;
+
+        // مسح الأخطاء السابقة
+        document.querySelectorAll(".form-error").forEach((el) => {
+          el.style.display = "none";
+        });
+
+        // التحقق من اسم المستخدم
+        const username = document.getElementById("username").value;
+        if (!username.trim() || username.length < 3) {
+          showError(
+            "username_error",
+            "اسم المستخدم يجب أن يكون 3 أحرف على الأقل"
+          );
+          isValid = false;
+        }
+
+        // التحقق من البريد الإلكتروني
+        const email = document.getElementById("email").value;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          showError("email_error", "يرجى إدخال بريد إلكتروني صحيح");
+          isValid = false;
+        }
+
+        // التحقق من كلمة المرور
+        const password = document.getElementById("password").value;
+        if (password.length < 6) {
+          showError(
+            "password_error",
+            "كلمة المرور يجب أن تكون 6 أحرف على الأقل"
+          );
+          isValid = false;
+        }
+
+        // التحقق من تطابق كلمتي المرور
+        if (!validatePasswordMatch()) {
+          isValid = false;
+        }
+
+        if (!isValid) {
+          e.preventDefault();
+        }
+      });
+
+    function showError(elementId, message) {
+      const errorElement = document.getElementById(elementId);
+      errorElement.textContent = message;
+      errorElement.style.display = "block";
+    }
+  });
+</script>
+{% endblock %}

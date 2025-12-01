@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل مستخدم - نظام الموارد البشرية{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <h1><i class="fas fa-user-edit"></i> تعديل مستخدم: {{ user.username }}</h1>
+        <a href="{{ url_for('users_management') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-right"></i> العودة إلى القائمة
+        </a>
+    </div>
+
+    <div class="user-summary">
+        <div class="summary-card">
+            <div class="summary-info">
+                <h3>{{ user.username }}</h3>
+                <p>{{ 'مسؤول' if user.role == 'admin' else 'مدير' if user.role == 'manager' else 'مستخدم' }}</p>
+                <div class="summary-meta">
+                    <span class="status-badge status-{{ 'active' if user.is_active else 'inactive' }}">
+                        {{ 'مفعل' if user.is_active else 'معطل' }}
+                    </span>
+                    <span class="created-date">
+                        أنشئ في: {{ user.created_at.strftime('%Y-%m-%d') }}
+                    </span>
+                    {% if user.last_login %}
+                    <span class="last-login">
+                        آخر دخول: {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" class="user-form" id="userForm">
+        <div class="form-section">
+            <h3><i class="fas fa-user-circle"></i> المعلومات الأساسية</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="username">اسم المستخدم *</label>
+                    <input type="text" id="username" name="username" 
+                           value="{{ user.username }}" required minlength="3">
+                    <div class="form-error" id="username_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">البريد الإلكتروني *</label>
+                    <input type="email" id="email" name="email" 
+                           value="{{ user.email or '' }}" required>
+                    <div class="form-error" id="email_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="role">الصلة *</label>
+                    <select id="role" name="role" required>
+                        <option value="user" {{ 'selected' if user.role == 'user' }}>مستخدم عادي</option>
+                        <option value="manager" {{ 'selected' if user.role == 'manager' }}>مدير</option>
+                        <option value="admin" {{ 'selected' if user.role == 'admin' }}>مسؤول</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="employee_id">ربط بموظف</label>
+                    <select id="employee_id" name="employee_id">
+                        <option value="">غير مرتبط</option>
+                        {% for employee in all_employees %}
+                        <option value="{{ employee.id }}" 
+                                {{ 'selected' if user.employee_id == employee.id }}>
+                            {{ employee.full_name }} - {{ employee.position }} ({{ employee.department_name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3><i class="fas fa-key"></i> كلمة المرور</h3>
+            <div class="checkbox-group">
+                <input type="checkbox" id="change_password" name="change_password">
+                <label for="change_password">تغيير كلمة المرور</label>
+            </div>
+            
+            <div id="passwordFields" style="display: none; margin-top: 1rem;">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="password">كلمة المرور الجديدة *</label>
+                        <input type="password" id="password" name="password" 
+                               minlength="6" placeholder="أدخل كلمة المرور الجديدة">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm_password">تأكيد كلمة المرور *</label>
+                        <input type="password" id="confirm_password" name="confirm_password" 
+                               minlength="6" placeholder="أعد إدخال كلمة المرور الجديدة">
+                    </div>
+                </div>
+                <div class="form-error" id="password_error"></div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3><i class="fas fa-cog"></i> الإعدادات</h3>
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="is_active" name="is_active" 
+                           {{ 'checked' if user.is_active }}>
+                    <label for="is_active">الحساب مفعل</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> حفظ التعديلات
+            </button>
+            <button type="reset" class="btn btn-secondary">
+                <i class="fas fa-undo"></i> إعادة تعيين
+            </button>
+            <a href="{{ url_for('users_management') }}" class="btn btn-outline">
+                <i class="fas fa-times"></i> إلغاء
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const changePasswordCheckbox = document.getElementById('change_password');
+    const passwordFields = document.getElementById('passwordFields');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+
+    // إظهار/إخفاء حقول كلمة المرور
+    changePasswordCheckbox.addEventListener('change', function() {
+        passwordFields.style.display = this.checked ? 'block' : 'none';
+        if (!this.checked) {
+            passwordInput.value = '';
+            confirmPasswordInput.value = '';
+        }
+    });
+
+    // التحقق من النموذج
+    document.getElementById('userForm').addEventListener('submit', function(e) {
+        let isValid = true;
+
+        // مسح الأخطاء السابقة
+        document.querySelectorAll('.form-error').forEach(el => {
+            el.style.display = 'none';
+        });
+
+        // التحقق من اسم المستخدم
+        const username = document.getElementById('username').value;
+        if (!username.trim() || username.length < 3) {
+            showError('username_error', 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل');
+            isValid = false;
+        }
+
+        // التحقق من البريد الإلكتروني
+        const email = document.getElementById('email').value;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showError('email_error', 'يرجى إدخال بريد إلكتروني صحيح');
+            isValid = false;
+        }
+
+        // التحقق من كلمة المرور إذا تم اختيار تغييرها
+        if (changePasswordCheckbox.checked) {
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+
+            if (password.length < 6) {
+                showError('password_error', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+                isValid = false;
+            }
+
+            if (password !== confirmPassword) {
+                showError('password_error', 'كلمة المرور غير متطابقة');
+                isValid = false;
+            }
+        }
+
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+
+    function showError(elementId, message) {
+        const errorElement = document.getElementById(elementId);
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

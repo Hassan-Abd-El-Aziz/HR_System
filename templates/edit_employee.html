@@ -1,0 +1,1230 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل بيانات الموظف - نظام الموارد البشرية{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <h1><i class="fas fa-user-edit"></i> تعديل بيانات الموظف</h1>
+        <a href="{{ url_for('employees') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-right"></i> العودة إلى القائمة
+        </a>
+    </div>
+
+    {% if employee %}
+    <div class="employee-summary">
+        <div class="summary-card">
+            <div class="summary-avatar">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="summary-info">
+                <h3>{{ employee.first_name }} {{ employee.last_name }}</h3>
+                <p>{{ employee.position }} - {{ employee.department_name }}</p>
+                <div class="summary-meta">
+                    <span class="badge badge-{{ 'success' if employee.status == 'active' else 'secondary' }}">
+                        {{ 'نشط' if employee.status == 'active' else 'غير نشط' }}
+                    </span>
+                    <span class="employee-id">رقم الموظف: {{ employee.employee_id }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" class="employee-form" onsubmit="return validateForm()">
+        <div class="form-section">
+            <h3><i class="fas fa-user"></i> المعلومات الشخصية</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="first_name">الاسم الأول *</label>
+                    <input type="text" id="first_name" name="first_name" 
+                           value="{{ employee.first_name }}" required>
+                    <div class="form-error" id="first_name_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="last_name">الاسم الأخير *</label>
+                    <input type="text" id="last_name" name="last_name" 
+                           value="{{ employee.last_name }}" required>
+                    <div class="form-error" id="last_name_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">البريد الإلكتروني *</label>
+                    <input type="email" id="email" name="email" 
+                           value="{{ employee.email }}" required>
+                    <div class="form-error" id="email_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">رقم الهاتف</label>
+                    <input type="tel" id="phone" name="phone" 
+                           value="{{ employee.phone or '' }}"
+                           pattern="[0-9]{10}" title="يرجى إدخال 10 أرقام">
+                    <div class="form-help">مثال: 0512345678</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="birth_date">تاريخ الميلاد</label>
+                    <input type="date" id="birth_date" name="birth_date" 
+                           value="{{ employee.birth_date or '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="gender">الجنس</label>
+                    <select id="gender" name="gender">
+                        <option value="">اختر الجنس</option>
+                        <option value="male" {% if employee.gender == 'male' %}selected{% endif %}>ذكر</option>
+                        <option value="female" {% if employee.gender == 'female' %}selected{% endif %}>أنثى</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- قسم الصورة الشخصية -->
+<div class="form-section">
+    <h3><i class="fas fa-camera"></i> الصورة الشخصية</h3>
+    <div class="photo-management">
+        <!-- معاينة الصورة الحالية -->
+        <div class="current-photo-section">
+            <h4>الصورة الحالية</h4>
+            <div class="photo-preview-container">
+                <div class="photo-preview" id="currentPhotoPreview">
+                    {% if employee.profile_picture_url %}
+                    <img src="/uploads/{{ employee.profile_picture_url }}" 
+                         alt="صورة {{ employee.first_name }}" 
+                         onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/default-avatar.png') }}';">
+                    {% else %}
+                    <div class="no-photo">
+                        <i class="fas fa-user-circle fa-4x"></i>
+                        <p>لا توجد صورة حالياً</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if employee.profile_photo %}
+                <div class="photo-actions">
+                    <label class="checkbox-action">
+                        <input type="checkbox" name="remove_profile_photo" id="remove_profile_photo">
+                        <span class="checkmark"></span>
+                        حذف الصورة الحالية
+                    </label>
+                    <a href="{{ url_for('static', filename='uploads/photos/' + employee.profile_photo) }}" 
+                       target="_blank" class="btn-view">
+                        <i class="fas fa-eye"></i> عرض الصورة
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- رفع صورة جديدة -->
+        <div class="upload-photo-section">
+            <h4>تغيير الصورة</h4>
+            <div class="form-group">
+                <label for="new_profile_photo">اختر صورة جديدة:</label>
+                <input type="file" id="new_profile_photo" name="new_profile_photo" 
+                       accept="image/jpeg,image/png,image/jpg,image/gif"
+                       onchange="previewNewImage(this)">
+                <div class="form-help">
+                    <small>الحد الأقصى: 2MB</small>
+                    <br>
+                    <small>المسموح: JPG, PNG, GIF</small>
+                </div>
+            </div>
+            
+            <!-- معاينة الصورة الجديدة -->
+            <div class="new-photo-preview" id="newPhotoPreview" style="display: none;">
+                <h5>معاينة الصورة الجديدة:</h5>
+                <div class="preview-container">
+                    <img id="newPhotoImg" src="" alt="معاينة الصورة الجديدة">
+                </div>
+                <button type="button" class="btn-remove-preview" onclick="removeNewImage()">
+                    <i class="fas fa-times"></i> إزالة المعاينة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+        <div class="form-section">
+            <h3><i class="fas fa-briefcase"></i> المعلومات الوظيفية</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="department_id">القسم *</label>
+                    <select id="department_id" name="department_id" required>
+                        <option value="">اختر القسم</option>
+                        {% for department in departments %}
+                        <option value="{{ department.id }}" 
+                                {% if employee.department_id == department.id %}selected{% endif %}>
+                            {{ department.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-error" id="department_id_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="position">الوظيفة *</label>
+                    <input type="text" id="position" name="position" 
+                           value="{{ employee.position }}" required>
+                    <div class="form-error" id="position_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="salary">الراتب *</label>
+                    <div class="input-group">
+                        <input type="number" id="salary" name="salary" 
+                               step="0.01" min="0" value="{{ employee.salary }}" required>
+                        <span class="input-group-text">ر.س</span>
+                    </div>
+                    <div class="form-error" id="salary_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hire_date">تاريخ التعيين *</label>
+                    <input type="date" id="hire_date" name="hire_date" 
+                           value="{{ employee.hire_date }}" required>
+                    <div class="form-error" id="hire_date_error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="status">الحالة الوظيفية *</label>
+                    <select id="status" name="status" required>
+                        <option value="active" {% if employee.status == 'active' %}selected{% endif %}>نشط</option>
+                        <option value="inactive" {% if employee.status == 'inactive' %}selected{% endif %}>غير نشط</option>
+                        <option value="on_leave" {% if employee.status == 'on_leave' %}selected{% endif %}>في إجازة</option>
+                        <option value="terminated" {% if employee.status == 'terminated' %}selected{% endif %}>منتهي الخدمة</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3><i class="fas fa-map-marker-alt"></i> معلومات الاتصال</h3>
+            <div class="form-group full-width">
+                <label for="address">العنوان</label>
+                <textarea id="address" name="address" rows="3" 
+                          placeholder="أدخل العنوان الكامل...">{{ employee.address or '' }}</textarea>
+            </div>
+        </div>
+
+
+
+<!-- قسم الملفات والمستندات -->
+<div class="form-section">
+    <h3><i class="fas fa-file-alt"></i> الملفات والمستندات</h3>
+    
+    <!-- المستندات الحالية -->
+    <div class="current-documents">
+        <h4>المستندات الحالية</h4>
+        
+        {% if employee.documents and employee.documents|length > 0 %}
+        <div class="documents-grid">
+            {% for document in employee.documents %}
+            <div class="document-card" id="document-{{ document.id }}">
+                <div class="document-icon">
+                    {% if document.filename.endswith('.pdf') %}
+                    <i class="fas fa-file-pdf text-danger"></i>
+                    {% elif document.filename.endswith('.doc') or document.filename.endswith('.docx') %}
+                    <i class="fas fa-file-word text-primary"></i>
+                    {% elif document.filename.endswith('.jpg') or document.filename.endswith('.jpeg') or document.filename.endswith('.png') %}
+                    <i class="fas fa-file-image text-success"></i>
+                    {% else %}
+                    <i class="fas fa-file text-secondary"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="document-info">
+                    <h5>{{ document.original_filename }}</h5>
+                    <p class="document-type">
+                        {% if document.file_type == 'cv' %}
+                        السيرة الذاتية
+                        {% elif document.file_type == 'contract' %}
+                        عقد العمل
+                        {% elif document.file_type == 'id' %}
+                        الهوية / الإقامة
+                        {% elif document.file_type == 'certificate' %}
+                        شهادات
+                        {% elif document.file_type == 'other' %}
+                        مستندات أخرى
+                        {% endif %}
+                    </p>
+                    <p class="document-meta">
+                        <small>{{ document.file_size|filesizeformat }}</small> • 
+                        <small>{{ document.uploaded_at.strftime('%Y-%m-%d') }}</small>
+                    </p>
+                </div>
+                
+                <div class="document-actions">
+                    <a href="{{ url_for('download_document', document_id=document.id) }}" 
+                       class="btn-action" title="تحميل">
+                        <i class="fas fa-download"></i>
+                    </a>
+                    <button type="button" class="btn-action btn-delete" 
+                            onclick="deleteDocument({{ document.id }})" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-documents">
+            <i class="fas fa-folder-open fa-2x"></i>
+            <p>لا توجد مستندات مرفوعة لهذا الموظف</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- إضافة مستندات جديدة -->
+    <div class="add-documents">
+        <h4>إضافة مستندات جديدة</h4>
+        
+        <div class="documents-upload">
+            <div class="upload-grid">
+                <!-- السيرة الذاتية -->
+                <div class="upload-item">
+                    <label for="cv_file">السيرة الذاتية (PDF/DOC)</label>
+                    <input type="file" id="cv_file" name="cv_file" 
+                           accept=".pdf,.doc,.docx,.txt">
+                    <small>اختر ملف السيرة الذاتية</small>
+                </div>
+                
+                <!-- عقد العمل -->
+                <div class="upload-item">
+                    <label for="contract_file">عقد العمل (PDF)</label>
+                    <input type="file" id="contract_file" name="contract_file" 
+                           accept=".pdf">
+                    <small>اختر ملف عقد العمل</small>
+                </div>
+                
+                <!-- الهوية -->
+                <div class="upload-item">
+                    <label for="id_file">الهوية / الإقامة (PDF/Image)</label>
+                    <input type="file" id="id_file" name="id_file" 
+                           accept=".pdf,.jpg,.jpeg,.png">
+                    <small>اختر ملف الهوية أو الإقامة</small>
+                </div>
+                
+                <!-- شهادات -->
+                <div class="upload-item">
+                    <label for="certificate_file">الشهادات (PDF/Image)</label>
+                    <input type="file" id="certificate_file" name="certificate_file" 
+                           accept=".pdf,.jpg,.jpeg,.png">
+                    <small>اختر ملفات الشهادات</small>
+                </div>
+                
+                <!-- مستندات أخرى -->
+                <div class="upload-item">
+                    <label for="other_files">مستندات أخرى</label>
+                    <input type="file" id="other_files" name="other_files[]" 
+                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt" multiple>
+                    <small>اختر مستندات أخرى (متعددة)</small>
+                </div>
+            </div>
+            
+            <!-- معاينة الملفات المختارة -->
+            <div class="selected-files" id="selectedFiles">
+                <h5>الملفات المختارة:</h5>
+                <div class="files-list" id="filesList">
+                    <p class="no-files">لم يتم اختيار أي ملفات</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- إضافة مستند مخصص -->
+        <div class="custom-document">
+            <h5>إضافة مستند مخصص</h5>
+            <div class="custom-document-form">
+                <div class="form-group">
+                    <label for="custom_document_type">نوع المستند:</label>
+                    <select id="custom_document_type" name="custom_document_type">
+                        <option value="">اختر النوع</option>
+                        <option value="cv">السيرة الذاتية</option>
+                        <option value="contract">عقد العمل</option>
+                        <option value="id">الهوية / الإقامة</option>
+                        <option value="certificate">شهادات</option>
+                        <option value="other">أخرى</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="custom_document_description">وصف المستند:</label>
+                    <input type="text" id="custom_document_description" 
+                           name="custom_document_description" 
+                           placeholder="مثال: عقد عمل مبدئي، شهادة الخبرة...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="custom_document_file">الملف:</label>
+                    <input type="file" id="custom_document_file" 
+                           name="custom_document_file">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div class="form-section">
+            <h3><i class="fas fa-info-circle"></i> معلومات النظام</h3>
+            <div class="system-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">رقم الموظف:</span>
+                        <span class="info-value">{{ employee.employee_id }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">تاريخ الإنشاء:</span>
+                        <span class="info-value">
+                            {% if employee.created_at %}
+                                {{ employee.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                غير معروف
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">آخر تحديث:</span>
+                        <span class="info-value">
+                            {% if employee.updated_at %}
+                                {{ employee.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                غير معروف
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> حفظ التعديلات
+            </button>
+            <button type="reset" class="btn btn-secondary">
+                <i class="fas fa-undo"></i> إعادة تعيين
+            </button>
+            <a href="{{ url_for('employees') }}" class="btn btn-outline">
+                <i class="fas fa-times"></i> إلغاء
+            </a>
+        </div>
+    </form>
+    {% else %}
+    <div class="alert alert-error">
+        <i class="fas fa-exclamation-triangle"></i>
+        لم يتم العثور على بيانات الموظف
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.employee-summary {
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.summary-avatar {
+    font-size: 3rem;
+}
+
+.summary-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+}
+
+.summary-info p {
+    margin: 0 0 1rem 0;
+    opacity: 0.9;
+}
+
+.summary-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.badge-success {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.badge-secondary {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.8);
+}
+
+.employee-id {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.form-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-right: 4px solid #3498db;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #ecf0f1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.input-group {
+    display: flex;
+}
+
+.input-group input {
+    border-radius: 5px 0 0 5px !important;
+}
+
+.input-group-text {
+    background: #ecf0f1;
+    border: 1px solid #bdc3c7;
+    border-left: none;
+    padding: 0.75rem;
+    border-radius: 0 5px 5px 0;
+    color: #7f8c8d;
+}
+
+.system-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 5px;
+    border: 1px solid #e9ecef;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.info-value {
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.form-error {
+    color: #e74c3c;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: none;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #95a5a6;
+    color: #95a5a6;
+}
+
+.btn-outline:hover {
+    background: #95a5a6;
+    color: white;
+}
+
+.form-help {
+    color: #6c757d;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+
+/* قسم الصورة الشخصية */
+.photo-management {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+@media (max-width: 992px) {
+    .photo-management {
+        grid-template-columns: 1fr;
+    }
+}
+
+.current-photo-section, .upload-photo-section {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.photo-preview-container {
+    text-align: center;
+}
+
+.photo-preview {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #3498db;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-photo {
+    color: #6c757d;
+    text-align: center;
+    padding: 2rem;
+}
+
+.no-photo i {
+    margin-bottom: 1rem;
+    color: #bdc3c7;
+}
+
+.photo-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.checkbox-action {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: #e74c3c;
+    font-weight: 500;
+}
+
+.checkbox-action input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.btn-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #3498db;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border: 1px solid #3498db;
+    border-radius: 5px;
+    transition: all 0.3s;
+}
+
+.btn-view:hover {
+    background: #3498db;
+    color: white;
+}
+
+.new-photo-preview {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.new-photo-preview h5 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.preview-container {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px dashed #bdc3c7;
+}
+
+.preview-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.btn-remove-preview {
+    display: block;
+    margin: 1rem auto 0;
+    padding: 0.5rem 1rem;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-remove-preview:hover {
+    background: #c0392b;
+}
+
+/* قسم الملفات والمستندات */
+.documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.document-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.document-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.document-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.document-info {
+    flex: 1;
+}
+
+.document-info h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.95rem;
+    color: #2c3e50;
+    word-break: break-word;
+}
+
+.document-type {
+    margin: 0 0 0.5rem 0;
+    color: #3498db;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.document-meta {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.document-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.btn-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dee2e6;
+    background: white;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-action:hover {
+    background: #f8f9fa;
+}
+
+.btn-delete:hover {
+    background: #e74c3c;
+    color: white;
+    border-color: #e74c3c;
+}
+
+.no-documents {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+.no-documents i {
+    margin-bottom: 1rem;
+    color: #bdc3c7;
+}
+
+/* رفع المستندات */
+.upload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.upload-item {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 2px dashed #bdc3c7;
+    transition: all 0.3s;
+}
+
+.upload-item:hover {
+    border-color: #3498db;
+    background: #e3f2fd;
+}
+
+.upload-item label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.upload-item input[type="file"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: white;
+}
+
+.upload-item small {
+    display: block;
+    margin-top: 0.5rem;
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.selected-files {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.files-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 1rem;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.file-name {
+    flex: 1;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.file-size {
+    color: #6c757d;
+    font-size: 0.8rem;
+    margin: 0 1rem;
+}
+
+.file-remove {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* مستند مخصص */
+.custom-document {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.custom-document-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.custom-document-form .form-group {
+    margin-bottom: 0;
+}
+</style>
+
+<script>
+function validateForm() {
+    let isValid = true;
+    
+    // مسح أخطاء سابقة
+    document.querySelectorAll('.form-error').forEach(el => {
+        el.style.display = 'none';
+    });
+    
+    // التحقق من الاسم الأول
+    const firstName = document.getElementById('first_name');
+    if (!firstName.value.trim()) {
+        showError('first_name_error', 'يرجى إدخال الاسم الأول');
+        isValid = false;
+    }
+    
+    // التحقق من الاسم الأخير
+    const lastName = document.getElementById('last_name');
+    if (!lastName.value.trim()) {
+        showError('last_name_error', 'يرجى إدخال الاسم الأخير');
+        isValid = false;
+    }
+    
+    // التحقق من البريد الإلكتروني
+    const email = document.getElementById('email');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.value.trim()) {
+        showError('email_error', 'يرجى إدخال البريد الإلكتروني');
+        isValid = false;
+    } else if (!emailRegex.test(email.value)) {
+        showError('email_error', 'يرجى إدخال بريد إلكتروني صحيح');
+        isValid = false;
+    }
+    
+    // التحقق من الراتب
+    const salary = document.getElementById('salary');
+    if (!salary.value || salary.value <= 0) {
+        showError('salary_error', 'يرجى إدخال راتب صحيح');
+        isValid = false;
+    }
+    
+    // التحقق من تاريخ التعيين
+    const hireDate = document.getElementById('hire_date');
+    if (!hireDate.value) {
+        showError('hire_date_error', 'يرجى إدخال تاريخ التعيين');
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
+function showError(elementId, message) {
+    const errorElement = document.getElementById(elementId);
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+}
+
+// إضافة تاريخ اليوم كحد أقصى لتاريخ الميلاد
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    const birthDate = document.getElementById('birth_date');
+    if (birthDate) {
+        birthDate.max = today;
+    }
+    
+    const hireDate = document.getElementById('hire_date');
+    if (hireDate) {
+        hireDate.max = today;
+    }
+});
+
+// معاينة الصورة الجديدة
+function previewNewImage(input) {
+    const previewContainer = document.getElementById('newPhotoPreview');
+    const previewImg = document.getElementById('newPhotoImg');
+    const file = input.files[0];
+
+    if (file) {
+        // التحقق من حجم الملف (2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('حجم الصورة كبير جداً. الحد الأقصى هو 2MB');
+            input.value = '';
+            return;
+        }
+
+        // التحقق من نوع الملف
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('نوع الملف غير مسموح. يرجى اختيار صورة (JPG, PNG, GIF)');
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+
+// إزالة معاينة الصورة الجديدة
+function removeNewImage() {
+    const input = document.getElementById('new_profile_photo');
+    const previewContainer = document.getElementById('newPhotoPreview');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+}
+
+// إدارة الملفات المختارة
+document.addEventListener('DOMContentLoaded', function() {
+    // متابعة جميع حقول الملفات
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    
+    fileInputs.forEach(input => {
+        if (input.id !== 'new_profile_photo') {
+            input.addEventListener('change', updateFilesList);
+        }
+    });
+    
+    updateFilesList(); // تحديث القائمة عند التحميل
+});
+
+function updateFilesList() {
+    const filesList = document.getElementById('filesList');
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    let allFiles = [];
+
+    // جمع جميع الملفات المختارة (باستثناء الصورة الشخصية)
+    fileInputs.forEach(input => {
+        if (input.id !== 'new_profile_photo' && input.files.length > 0) {
+            for (let file of input.files) {
+                allFiles.push({
+                    name: file.name,
+                    size: file.size,
+                    input: input
+                });
+            }
+        }
+    });
+
+    // تحديث القائمة
+    if (allFiles.length === 0) {
+        filesList.innerHTML = '<p class="no-files">لم يتم اختيار أي ملفات</p>';
+    } else {
+        filesList.innerHTML = allFiles.map(file => `
+            <div class="file-item">
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${formatFileSize(file.size)}</span>
+                <button type="button" class="file-remove" 
+                        onclick="removeFile(this, '${file.input.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+}
+
+function removeFile(button, inputId) {
+    const fileItem = button.closest('.file-item');
+    const input = document.getElementById(inputId);
+    
+    fileItem.remove();
+    input.value = '';
+    
+    // إذا كان حقل متعدد الملفات، نحتاج إلى إعادة بناء الملفات
+    if (input.multiple) {
+        const newFileList = new DataTransfer();
+        // يمكن إضافة منطق لحفظ الملفات الأخرى هنا إذا لزم الأمر
+        input.files = newFileList.files;
+    }
+    
+    updateFilesList();
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// حذف مستند
+function deleteDocument(documentId) {
+    if (confirm('هل أنت متأكد من حذف هذا المستند؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+        // إرسال طلب حذف عبر AJAX
+        fetch(`/employee/document/delete/${documentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // إزالة العنصر من الواجهة
+                const documentElement = document.getElementById(`document-${documentId}`);
+                if (documentElement) {
+                    documentElement.remove();
+                }
+                alert('تم حذف المستند بنجاح');
+            } else {
+                alert('حدث خطأ أثناء حذف المستند: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('حدث خطأ في الاتصال');
+        });
+    }
+}
+
+// التحقق من الملفات قبل الإرسال
+function validateForm() {
+    let isValid = true;
+    
+    // مسح أخطاء سابقة
+    document.querySelectorAll('.form-error').forEach(el => {
+        el.style.display = 'none';
+    });
+    
+    // التحقق من الاسم الأول
+    const firstName = document.getElementById('first_name');
+    if (!firstName.value.trim()) {
+        showError('first_name_error', 'يرجى إدخال الاسم الأول');
+        isValid = false;
+    }
+    
+    // التحقق من الاسم الأخير
+    const lastName = document.getElementById('last_name');
+    if (!lastName.value.trim()) {
+        showError('last_name_error', 'يرجى إدخال الاسم الأخير');
+        isValid = false;
+    }
+    
+    // التحقق من البريد الإلكتروني
+    const email = document.getElementById('email');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.value.trim()) {
+        showError('email_error', 'يرجى إدخال البريد الإلكتروني');
+        isValid = false;
+    } else if (!emailRegex.test(email.value)) {
+        showError('email_error', 'يرجى إدخال بريد إلكتروني صحيح');
+        isValid = false;
+    }
+    
+    // التحقق من الصورة الشخصية إذا تم اختيار واحدة
+    const newPhoto = document.getElementById('new_profile_photo');
+    if (newPhoto.files.length > 0) {
+        const file = newPhoto.files[0];
+        if (file.size > 2 * 1024 * 1024) {
+            alert('حجم الصورة كبير جداً. الحد الأقصى هو 2MB');
+            isValid = false;
+        }
+        
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('نوع الملف غير مسموح. يرجى اختيار صورة (JPG, PNG, GIF)');
+            isValid = false;
+        }
+    }
+    
+    // التحقق من الملفات المرفوعة
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        if (input.id !== 'new_profile_photo' && input.files.length > 0) {
+            for (let file of input.files) {
+                // التحقق من حجم الملف (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert(`ملف ${file.name} كبير جداً. الحد الأقصى هو 10MB`);
+                    isValid = false;
+                    break;
+                }
+                
+                // التحقق من نوع الملف
+                const allowedExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.txt'];
+                const fileName = file.name.toLowerCase();
+                const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+                
+                if (!hasValidExtension) {
+                    alert(`نوع ملف ${file.name} غير مسموح. المسموح: PDF, DOC, DOCX, JPG, PNG, TXT`);
+                    isValid = false;
+                    break;
+                }
+            }
+        }
+    });
+    
+    return isValid;
+}
+
+function showError(elementId, message) {
+    const errorElement = document.getElementById(elementId);
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+}
+</script>
+{% endblock %}

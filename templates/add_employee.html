@@ -1,0 +1,711 @@
+{% extends "base.html" %} {% block title %}إضافة موظف جديد - نظام الموارد
+البشرية{% endblock %} {% block content %}
+<div class="form-container">
+  <div class="form-header">
+    <h1><i class="fas fa-user-plus"></i> إضافة موظف جديد</h1>
+    <a href="{{ url_for('employees') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-right"></i> العودة إلى القائمة
+    </a>
+  </div>
+
+  <form
+    method="POST"
+    class="employee-form"
+    id="employeeForm"
+    enctype="multipart/form-data"
+  >
+    <!-- قسم الصورة الشخصية -->
+    <div class="form-section">
+      <h3><i class="fas fa-camera"></i> الصورة الشخصية</h3>
+      <div class="photo-upload-section">
+        <div class="photo-preview">
+          <div class="photo-placeholder" id="photoPreview">
+            <i class="fas fa-user-circle"></i>
+            <span>سيظهر معاينة الصورة هنا</span>
+          </div>
+        </div>
+        <div class="photo-upload">
+          <div class="form-group">
+            <label for="profile_photo">صورة الشخصية:</label>
+            <input
+              type="file"
+              id="profile_photo"
+              name="profile_photo"
+              accept="image/*"
+              onchange="previewImage(this)"
+            />
+            <div class="form-help">
+              <small>الامتدادات المسموحة: PNG, JPG, JPEG, GIF</small>
+              <br />
+              <small>الحد الأقصى: 5MB - الحجم الموصى: 300x300 بكسل</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- المعلومات الشخصية -->
+    <div class="form-section">
+      <h3><i class="fas fa-user"></i> المعلومات الشخصية</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="first_name">الاسم الأول *</label>
+          <input
+            type="text"
+            id="first_name"
+            name="first_name"
+            required
+            placeholder="أدخل الاسم الأول"
+          />
+          <div class="form-error" id="first_name_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="last_name">الاسم الأخير *</label>
+          <input
+            type="text"
+            id="last_name"
+            name="last_name"
+            required
+            placeholder="أدخل الاسم الأخير"
+          />
+          <div class="form-error" id="last_name_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">البريد الإلكتروني *</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            placeholder="أدخل البريد الإلكتروني"
+          />
+          <div class="form-error" id="email_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">رقم الهاتف</label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            placeholder="أدخل رقم الهاتف"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="birth_date">تاريخ الميلاد</label>
+          <input
+            type="date"
+            id="birth_date"
+            name="birth_date"
+            max="{{ today }}"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="gender">الجنس</label>
+          <select id="gender" name="gender">
+            <option value="">اختر الجنس</option>
+            <option value="male">ذكر</option>
+            <option value="female">أنثى</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- المعلومات الوظيفية -->
+    <div class="form-section">
+      <h3><i class="fas fa-briefcase"></i> المعلومات الوظيفية</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="department_id">القسم *</label>
+          <select id="department_id" name="department_id" required>
+            <option value="">اختر القسم</option>
+            {% for department in departments %}
+            <option value="{{ department.id }}">{{ department.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-error" id="department_id_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="position">الوظيفة *</label>
+          <input
+            type="text"
+            id="position"
+            name="position"
+            required
+            placeholder="أدخل المسمى الوظيفي"
+          />
+          <div class="form-error" id="position_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="salary">الراتب *</label>
+          <div class="input-group">
+            <input
+              type="number"
+              id="salary"
+              name="salary"
+              step="0.01"
+              min="0"
+              required
+              placeholder="0.00"
+            />
+            <span class="input-group-text">ر.س</span>
+          </div>
+          <div class="form-error" id="salary_error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="hire_date">تاريخ التعيين *</label>
+          <input
+            type="date"
+            id="hire_date"
+            name="hire_date"
+            required
+            max="{{ today }}"
+          />
+          <div class="form-error" id="hire_date_error"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- معلومات الاتصال -->
+    <div class="form-section">
+      <h3><i class="fas fa-map-marker-alt"></i> معلومات الاتصال</h3>
+      <div class="form-group full-width">
+        <label for="address">العنوان</label>
+        <textarea
+          id="address"
+          name="address"
+          rows="3"
+          placeholder="أدخل العنوان الكامل..."
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- قسم الملفات والمستندات -->
+    <div class="form-section">
+      <h3><i class="fas fa-file"></i> الملفات والمستندات</h3>
+
+      <!-- تحميل المستندات -->
+      <div class="documents-upload">
+        <div class="form-group">
+          <label>إضافة مستندات:</label>
+          <div class="file-upload-grid">
+            <div class="file-upload-item">
+              <label for="cv_file">السيرة الذاتية (PDF)</label>
+              <input
+                type="file"
+                id="cv_file"
+                name="cv_file"
+                accept=".pdf,.doc,.docx"
+              />
+            </div>
+
+            <div class="file-upload-item">
+              <label for="contract_file">عقد العمل (PDF)</label>
+              <input
+                type="file"
+                id="contract_file"
+                name="contract_file"
+                accept=".pdf"
+              />
+            </div>
+
+            <div class="file-upload-item">
+              <label for="id_file">صورة الهوية (PDF/Image)</label>
+              <input
+                type="file"
+                id="id_file"
+                name="id_file"
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+            </div>
+
+            <div class="file-upload-item">
+              <label for="certificate_file">الشهادات (PDF)</label>
+              <input
+                type="file"
+                id="certificate_file"
+                name="certificate_file"
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+            </div>
+          </div>
+          <div class="form-help">
+            <small>يمكنك رفع ملفات متعددة - الحد الأقصى للملف: 10MB</small>
+            <br />
+            <small>الامتدادات المسموحة: PDF, DOC, DOCX, JPG, JPEG, PNG</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- معاينة الملفات المختارة -->
+      <div class="selected-files" id="selectedFiles">
+        <h4>الملفات المختارة:</h4>
+        <div class="files-list" id="filesList">
+          <p class="no-files">لم يتم اختيار أي ملفات بعد</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> حفظ الموظف
+      </button>
+      <button type="reset" class="btn btn-secondary" onclick="resetForm()">
+        <i class="fas fa-undo"></i> إعادة تعيين
+      </button>
+      <a href="{{ url_for('employees') }}" class="btn btn-outline">
+        <i class="fas fa-times"></i> إلغاء
+      </a>
+    </div>
+  </form>
+</div>
+
+<style>
+  .employee-form {
+    max-width: 1000px;
+  }
+
+  .form-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+  }
+
+  .form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 0.5rem;
+  }
+
+  /* تنسيقات رفع الصورة */
+  .photo-upload-section {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .photo-preview {
+    text-align: center;
+  }
+
+  .photo-placeholder {
+    width: 150px;
+    height: 150px;
+    border: 2px dashed #bdc3c7;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #7f8c8d;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+  }
+
+  .photo-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .photo-placeholder span {
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 0 0.5rem;
+  }
+
+  .photo-preview img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #3498db;
+  }
+
+  .photo-upload {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+  }
+
+  /* تنسيقات رفع الملفات */
+  .file-upload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .file-upload-item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+
+  .file-upload-item label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #2c3e50;
+  }
+
+  .file-upload-item input[type="file"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: white;
+  }
+
+  .selected-files {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+
+  .selected-files h4 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+    font-size: 1rem;
+  }
+
+  .files-list {
+    min-height: 50px;
+  }
+
+  .no-files {
+    color: #6c757d;
+    text-align: center;
+    margin: 0;
+    font-style: italic;
+  }
+
+  .file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+
+  .file-name {
+    flex: 1;
+    color: #495057;
+    font-size: 0.9rem;
+  }
+
+  .file-size {
+    color: #6c757d;
+    font-size: 0.8rem;
+    margin-left: 1rem;
+  }
+
+  .remove-file {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+  }
+
+  .remove-file:hover {
+    background: #c0392b;
+  }
+
+  /* تنسيقات عامة */
+  .input-group {
+    display: flex;
+  }
+
+  .input-group input {
+    border-radius: 5px 0 0 5px !important;
+    border-right: none;
+  }
+
+  .input-group-text {
+    background: #ecf0f1;
+    border: 1px solid #bdc3c7;
+    border-left: none;
+    padding: 0.75rem;
+    border-radius: 0 5px 5px 0;
+    color: #7f8c8d;
+  }
+
+  .form-help {
+    margin-top: 0.5rem;
+  }
+
+  .form-help small {
+    color: #6c757d;
+    line-height: 1.4;
+  }
+
+  .form-error {
+    color: #e74c3c;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: none;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 2px solid #95a5a6;
+    color: #95a5a6;
+  }
+
+  .btn-outline:hover {
+    background: #95a5a6;
+    color: white;
+  }
+</style>
+
+<script>
+  // معاينة الصورة
+  function previewImage(input) {
+    const preview = document.getElementById("photoPreview");
+    const file = input.files[0];
+
+    if (file) {
+      // التحقق من حجم الملف (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("حجم الصورة كبير جداً. الحد الأقصى هو 5MB");
+        input.value = "";
+        return;
+      }
+
+      // التحقق من نوع الملف
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        alert("نوع الملف غير مسموح. يرجى اختيار صورة (JPG, PNG, GIF)");
+        input.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        preview.innerHTML = `<img src="${e.target.result}" alt="معاينة الصورة">`;
+      };
+
+      reader.readAsDataURL(file);
+    } else {
+      preview.innerHTML = `
+            <i class="fas fa-user-circle"></i>
+            <span>سيظهر معاينة الصورة هنا</span>
+        `;
+    }
+  }
+
+  // إدارة الملفات المختارة
+  document.addEventListener("DOMContentLoaded", function () {
+    // متابعة جميع حقول الملفات
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+
+    fileInputs.forEach((input) => {
+      if (input.id !== "profile_photo") {
+        input.addEventListener("change", function () {
+          updateFilesList();
+        });
+      }
+    });
+  });
+
+  function updateFilesList() {
+    const filesList = document.getElementById("filesList");
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    let allFiles = [];
+
+    // جمع جميع الملفات المختارة
+    fileInputs.forEach((input) => {
+      if (input.id !== "profile_photo" && input.files.length > 0) {
+        for (let file of input.files) {
+          allFiles.push({
+            name: file.name,
+            size: file.size,
+            input: input,
+          });
+        }
+      }
+    });
+
+    // تحديث القائمة
+    if (allFiles.length === 0) {
+      filesList.innerHTML =
+        '<p class="no-files">لم يتم اختيار أي ملفات بعد</p>';
+    } else {
+      filesList.innerHTML = allFiles
+        .map(
+          (file) => `
+            <div class="file-item">
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${formatFileSize(file.size)}</span>
+                <button type="button" class="remove-file" onclick="removeFile(this, '${
+                  file.input.id
+                }')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `
+        )
+        .join("");
+    }
+  }
+
+  function removeFile(button, inputId) {
+    const fileItem = button.closest(".file-item");
+    fileItem.remove();
+
+    // مسح قيمة حقل الإدخال
+    const input = document.getElementById(inputId);
+    input.value = "";
+
+    // تحديث القائمة
+    updateFilesList();
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
+  // التحقق من النموذج
+  document
+    .getElementById("employeeForm")
+    .addEventListener("submit", function (e) {
+      let isValid = true;
+
+      // مسح الأخطاء السابقة
+      document.querySelectorAll(".form-error").forEach((el) => {
+        el.style.display = "none";
+      });
+
+      // التحقق من الاسم الأول
+      const firstName = document.getElementById("first_name");
+      if (!firstName.value.trim()) {
+        showError("first_name_error", "يرجى إدخال الاسم الأول");
+        isValid = false;
+      }
+
+      // التحقق من الاسم الأخير
+      const lastName = document.getElementById("last_name");
+      if (!lastName.value.trim()) {
+        showError("last_name_error", "يرجى إدخال الاسم الأخير");
+        isValid = false;
+      }
+
+      // التحقق من البريد الإلكتروني
+      const email = document.getElementById("email");
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email.value.trim()) {
+        showError("email_error", "يرجى إدخال البريد الإلكتروني");
+        isValid = false;
+      } else if (!emailRegex.test(email.value)) {
+        showError("email_error", "يرجى إدخال بريد إلكتروني صحيح");
+        isValid = false;
+      }
+
+      // التحقق من القسم
+      const department = document.getElementById("department_id");
+      if (!department.value) {
+        showError("department_id_error", "يرجى اختيار القسم");
+        isValid = false;
+      }
+
+      // التحقق من الوظيفة
+      const position = document.getElementById("position");
+      if (!position.value.trim()) {
+        showError("position_error", "يرجى إدخال المسمى الوظيفي");
+        isValid = false;
+      }
+
+      // التحقق من الراتب
+      const salary = document.getElementById("salary");
+      if (!salary.value || salary.value <= 0) {
+        showError("salary_error", "يرجى إدخال راتب صحيح");
+        isValid = false;
+      }
+
+      // التحقق من تاريخ التعيين
+      const hireDate = document.getElementById("hire_date");
+      if (!hireDate.value) {
+        showError("hire_date_error", "يرجى إدخال تاريخ التعيين");
+        isValid = false;
+      }
+
+      if (!isValid) {
+        e.preventDefault();
+        // التمرير إلى أول حقل به خطأ
+        const firstError = document.querySelector(
+          '.form-error[style="display: block;"]'
+        );
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+    });
+
+  function showError(elementId, message) {
+    const errorElement = document.getElementById(elementId);
+    errorElement.textContent = message;
+    errorElement.style.display = "block";
+  }
+
+  function resetForm() {
+    // إعادة تعيين معاينة الصورة
+    document.getElementById("photoPreview").innerHTML = `
+        <i class="fas fa-user-circle"></i>
+        <span>سيظهر معاينة الصورة هنا</span>
+    `;
+
+    // إعادة تعيين قائمة الملفات
+    document.getElementById("filesList").innerHTML =
+      '<p class="no-files">لم يتم اختيار أي ملفات بعد</p>';
+
+    // مسح جميع الأخطاء
+    document.querySelectorAll(".form-error").forEach((el) => {
+      el.style.display = "none";
+    });
+  }
+
+  // تعيين تاريخ اليوم كحد أقصى لتواريخ الميلاد والتعيين
+  document.addEventListener("DOMContentLoaded", function () {
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("birth_date").max = today;
+    document.getElementById("hire_date").max = today;
+  });
+</script>
+{% endblock %}

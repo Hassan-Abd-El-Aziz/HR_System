@@ -1,0 +1,735 @@
+{% extends "base.html" %} {% block title %}التقارير - نظام الموارد البشرية{%
+endblock %} {% block content %}
+<div class="page-header">
+  <h1>التقارير والإحصائيات</h1>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="exportToExcel()">
+      <i class="fas fa-file-excel"></i> تصدير إلى Excel
+    </button>
+    <button class="btn btn-secondary" onclick="printReports()">
+      <i class="fas fa-print"></i> طباعة
+    </button>
+  </div>
+</div>
+
+<div class="reports-controls">
+  <div class="filters">
+    <div class="filter-group">
+      <label for="departmentFilter">القسم:</label>
+      <select id="departmentFilter" onchange="filterReports()">
+        <option value="">جميع الأقسام</option>
+        {% for department in departments %}
+        <option value="{{ department.id }}">{{ department.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="dateFilter">الفترة:</label>
+      <select id="dateFilter" onchange="filterReports()">
+        <option value="all">جميع الفترات</option>
+        <option value="month">هذا الشهر</option>
+        <option value="quarter">هذا الربع</option>
+        <option value="year">هذه السنة</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="reports-grid">
+  <div class="report-card">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-pie"></i> توزيع الموظفين حسب الأقسام</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="departmentChart"></canvas>
+    </div>
+    <div class="chart-summary" id="departmentSummary"></div>
+  </div>
+
+  <div class="report-card">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-bar"></i> توزيع الرواتب</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="salaryChart"></canvas>
+    </div>
+    <div class="chart-summary" id="salarySummary"></div>
+  </div>
+
+  <div class="report-card full-width">
+    <div class="card-header">
+      <h3><i class="fas fa-table"></i> إحصائيات مفصلة</h3>
+      <div class="card-actions">
+        <button class="btn btn-sm btn-secondary" onclick="exportTableToCSV()">
+          <i class="fas fa-download"></i> CSV
+        </button>
+      </div>
+    </div>
+    <div class="stats-table">
+      <table id="detailedStats">
+        <thead>
+          <tr>
+            <th>القسم</th>
+            <th>عدد الموظفين</th>
+            <th>متوسط الراتب</th>
+            <th>أعلى راتب</th>
+            <th>أقل راتب</th>
+            <th>إجمالي الرواتب</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for stat in department_stats %}
+          <tr>
+            <td>{{ stat.name }}</td>
+            <td>{{ stat.employee_count }}</td>
+            <!-- <td>{{ "%.2f"|format(stat.avg_salary) }} ر.س</td> -->
+            <td>{{ "%.2f"|format(stat.max_salary) }} ر.س</td>
+            <td>{{ "%.2f"|format(stat.min_salary) }} ر.س</td>
+            <td>
+              {{ "%.2f"|format(stat.avg_salary * stat.employee_count) }} ر.س
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td><strong>المجموع</strong></td>
+            <td>
+              <strong
+                >{{ department_stats|sum(attribute='employee_count') }}</strong
+              >
+            </td>
+            <td>
+              <!-- <strong
+                >{{ "%.2f"|format(department_stats|sum(attribute='avg_salary') /
+                department_stats|length if department_stats|length > 0 else 0)
+                }} ر.س</strong -->
+              >
+            </td>
+            <td>
+              <strong
+                >{{
+                "%.2f"|format(department_stats|max(attribute='max_salary')|default(0))
+                }} ر.س</strong
+              >
+            </td>
+            <td>
+              <strong
+                >{{
+                "%.2f"|format(department_stats|min(attribute='min_salary')|default(0))
+                }} ر.س</strong
+              >
+            </td>
+            <td>
+              <!-- <strong
+                >{{ "%.2f"|format(department_stats|sum(attribute='avg_salary') *
+                department_stats|sum(attribute='employee_count')) }} ر.س</strong
+              > -->
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- بطاقات إضافية -->
+  <div class="report-card">
+    <div class="card-header">
+      <h3><i class="fas fa-users"></i> ملخص الموظفين</h3>
+    </div>
+    <div class="summary-stats">
+      <div class="stat-item">
+        <div class="stat-icon total-employees">
+          <i class="fas fa-user-friends"></i>
+        </div>
+        <div class="stat-info">
+          <h4 id="totalEmployees">0</h4>
+          <p>إجمالي الموظفين</p>
+        </div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-icon active-employees">
+          <i class="fas fa-user-check"></i>
+        </div>
+        <div class="stat-info">
+          <h4 id="activeEmployees">0</h4>
+          <p>موظفين نشطين</p>
+        </div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-icon average-salary">
+          <i class="fas fa-money-bill-wave"></i>
+        </div>
+        <div class="stat-info">
+          <h4 id="averageSalary">0</h4>
+          <p>متوسط الراتب</p>
+        </div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-icon departments-count">
+          <i class="fas fa-building"></i>
+        </div>
+        <div class="stat-info">
+          <h4 id="departmentsCount">0</h4>
+          <p>عدد الأقسام</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-card">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-line"></i> اتجاهات التوظيف</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="hiringTrendChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ستايلات إضافية -->
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .reports-controls {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+  }
+
+  .filters {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 200px;
+  }
+
+  .filter-group label {
+    font-weight: 500;
+    color: #2c3e50;
+  }
+
+  .filter-group select {
+    padding: 0.75rem;
+    border: 1px solid #bdc3c7;
+    border-radius: 5px;
+    background: white;
+  }
+
+  .reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .report-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+  }
+
+  .report-card.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 1rem;
+  }
+
+  .card-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
+
+  .chart-summary {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    color: #495057;
+  }
+
+  .stats-table {
+    overflow-x: auto;
+  }
+
+  .stats-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .stats-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: right;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+  }
+
+  .stats-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    text-align: right;
+  }
+
+  .stats-table tfoot {
+    background: #f8f9fa;
+    font-weight: 600;
+  }
+
+  .total-row td {
+    border-top: 2px solid #dee2e6;
+  }
+
+  .summary-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+
+  .stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+  }
+
+  .total-employees {
+    background: #3498db;
+  }
+  .active-employees {
+    background: #2ecc71;
+  }
+  .average-salary {
+    background: #9b59b6;
+  }
+  .departments-count {
+    background: #e67e22;
+  }
+
+  .stat-info h4 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #2c3e50;
+  }
+
+  .stat-info p {
+    margin: 0.25rem 0 0 0;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+  }
+
+  /* استجابة للشاشات الصغيرة */
+  @media (max-width: 768px) {
+    .reports-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .summary-stats {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<!-- مكتبة Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  // تعريف المتغيرات للرسوم البيانية
+  let departmentChartInstance = null;
+  let salaryChartInstance = null;
+  let hiringTrendChartInstance = null;
+
+  // ألوان للرسوم البيانية
+  const chartColors = [
+    "#3498db",
+    "#2ecc71",
+    "#e74c3c",
+    "#f39c12",
+    "#9b59b6",
+    "#1abc9c",
+    "#d35400",
+    "#c0392b",
+    "#16a085",
+    "#8e44ad",
+  ];
+
+  // تحميل البيانات عند فتح الصفحة
+  document.addEventListener("DOMContentLoaded", function () {
+    loadAllCharts();
+    updateSummaryStats();
+  });
+
+  // تحميل جميع الرسوم البيانية
+  async function loadAllCharts() {
+    await loadDepartmentChart();
+    await loadSalaryChart();
+    await loadHiringTrendChart();
+  }
+
+  // رسم بياني لتوزيع الموظفين حسب الأقسام
+  async function loadDepartmentChart() {
+    try {
+      const response = await fetch("/api/reports/department-distribution");
+      const data = await response.json();
+
+      const ctx = document.getElementById("departmentChart").getContext("2d");
+
+      // تدمير المخطط السابق إذا كان موجوداً
+      if (departmentChartInstance) {
+        departmentChartInstance.destroy();
+      }
+
+      departmentChartInstance = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: data.labels,
+          datasets: [
+            {
+              data: data.data,
+              backgroundColor: chartColors,
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "left",
+              rtl: true,
+            },
+            tooltip: {
+              rtl: true,
+              callbacks: {
+                label: function (context) {
+                  let label = context.label || "";
+                  if (label) {
+                    label += ": ";
+                  }
+                  label += context.raw + " موظف";
+                  return label;
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // تحديث الملخص
+      const total = data.data.reduce((a, b) => a + b, 0);
+      document.getElementById("departmentSummary").innerHTML = `
+      <strong>إجمالي الموظفين:</strong> ${total} موظف<br>
+      <strong>عدد الأقسام:</strong> ${data.labels.length} قسم
+    `;
+    } catch (error) {
+      console.error("Error loading department chart:", error);
+    }
+  }
+
+  // رسم بياني لتوزيع الرواتب
+  async function loadSalaryChart() {
+    try {
+      const response = await fetch("/api/reports/salary-distribution");
+      const data = await response.json();
+
+      const ctx = document.getElementById("salaryChart").getContext("2d");
+
+      if (salaryChartInstance) {
+        salaryChartInstance.destroy();
+      }
+
+      salaryChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: data.labels,
+          datasets: [
+            {
+              label: "عدد الموظفين",
+              data: data.data,
+              backgroundColor: "#3498db",
+              borderColor: "#2980b9",
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "عدد الموظفين",
+              },
+            },
+            x: {
+              title: {
+                display: true,
+                text: "نطاق الراتب",
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              rtl: true,
+              callbacks: {
+                label: function (context) {
+                  return `عدد الموظفين: ${context.raw}`;
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // تحديث ملخص الرواتب
+      const totalEmployees = data.data.reduce((a, b) => a + b, 0);
+      document.getElementById("salarySummary").innerHTML = `
+      <strong>إجمالي الموظفين:</strong> ${totalEmployees}<br>
+      <strong>أعلى شريحة:</strong> ${
+        data.labels[data.data.indexOf(Math.max(...data.data))]
+      }
+    `;
+    } catch (error) {
+      console.error("Error loading salary chart:", error);
+    }
+  }
+
+  // رسم بياني لاتجاهات التوظيف
+  async function loadHiringTrendChart() {
+    try {
+      // هنا يمكنك إضافة API endpoint لبيانات اتجاهات التوظيف
+      // للتبسيط، سنستخدم بيانات وهمية حالياً
+      const ctx = document.getElementById("hiringTrendChart").getContext("2d");
+
+      if (hiringTrendChartInstance) {
+        hiringTrendChartInstance.destroy();
+      }
+
+      // بيانات وهمية للعرض
+      const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"];
+      const hiringData = [5, 8, 12, 7, 10, 15];
+
+      hiringTrendChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: months,
+          datasets: [
+            {
+              label: "عدد التوظيفات",
+              data: hiringData,
+              backgroundColor: "rgba(52, 152, 219, 0.2)",
+              borderColor: "#3498db",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "عدد التوظيفات",
+              },
+            },
+            x: {
+              title: {
+                display: true,
+                text: "الشهر",
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: "top",
+              rtl: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error loading hiring trend chart:", error);
+    }
+  }
+
+  // تحديث إحصائيات الملخص
+  async function updateSummaryStats() {
+    try {
+      const response = await fetch("/api/reports/summary");
+      const data = await response.json();
+
+      document.getElementById("totalEmployees").textContent =
+        data.total_employees;
+      document.getElementById("activeEmployees").textContent =
+        data.active_employees;
+      document.getElementById("averageSalary").textContent =
+        data.average_salary.toFixed(2);
+      document.getElementById("departmentsCount").textContent =
+        data.departments_count;
+    } catch (error) {
+      // إذا لم يكن الـ API موجوداً، استخدم البيانات من الجدول
+      const rows = document.querySelectorAll("#detailedStats tbody tr");
+      let totalEmployees = 0;
+      let totalSalary = 0;
+      let departments = new Set();
+
+      rows.forEach((row) => {
+        const cells = row.querySelectorAll("td");
+        const employeeCount = parseInt(cells[1].textContent);
+        const avgSalary = parseFloat(cells[2].textContent);
+
+        totalEmployees += employeeCount;
+        totalSalary += avgSalary * employeeCount;
+        departments.add(cells[0].textContent);
+      });
+
+      document.getElementById("totalEmployees").textContent = totalEmployees;
+      document.getElementById("activeEmployees").textContent = totalEmployees; // نفترض جميعهم نشطين للتبسيط
+      document.getElementById("averageSalary").textContent = (
+        totalSalary / totalEmployees || 0
+      ).toFixed(2);
+      document.getElementById("departmentsCount").textContent =
+        departments.size;
+    }
+  }
+
+  // فلترة التقارير
+  function filterReports() {
+    const department = document.getElementById("departmentFilter").value;
+    const period = document.getElementById("dateFilter").value;
+
+    // هنا يمكنك إضافة منطق الفلترة
+    // يمكنك إعادة تحميل البيانات مع معلمات الفلترة
+    console.log("Filtering by:", { department, period });
+
+    // إعادة تحميل الرسوم البيانية مع الفلترة
+    loadAllCharts();
+  }
+
+  // تصدير إلى Excel
+  function exportToExcel() {
+    window.location.href = "/export/reports/excel";
+  }
+
+  // طباعة التقارير
+  function printReports() {
+    window.print();
+  }
+
+  // تصدير الجدول إلى CSV
+  function exportTableToCSV() {
+    const table = document.getElementById("detailedStats");
+    const rows = table.querySelectorAll("tr");
+    const csv = [];
+
+    rows.forEach((row) => {
+      const rowData = [];
+      const cells = row.querySelectorAll("th, td");
+
+      cells.forEach((cell) => {
+        // إزالة أي فواصل من النص لتجنب مشاكل CSV
+        let text = cell.textContent.replace(/,/g, ";").trim();
+        rowData.push(text);
+      });
+
+      csv.push(rowData.join(","));
+    });
+
+    const csvContent = csv.join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = `reports_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+  }
+
+  // إضافة API endpoint إضافي في حالة عدم وجوده
+  // يمكنك إضافته في Flask route
+  /*
+@app.route('/api/reports/summary')
+def reports_summary():
+    total_employees = db.session.query(func.count(Employee.id)).scalar() or 0
+    active_employees = db.session.query(func.count(Employee.id)).filter(
+        Employee.status == 'active'
+    ).scalar() or 0
+    average_salary = db.session.query(func.avg(Employee.salary)).scalar() or 0
+    departments_count = db.session.query(func.count(Department.id)).scalar() or 0
+    
+    return jsonify({
+        'total_employees': total_employees,
+        'active_employees': active_employees,
+        'average_salary': float(average_salary),
+        'departments_count': departments_count
+    })
+*/
+</script>
+{% endblock %}

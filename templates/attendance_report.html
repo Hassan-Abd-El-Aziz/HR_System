@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}تقرير الحضور - نظام الموارد البشرية{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-chart-bar"></i> تقرير الحضور</h1>
+</div>
+
+<div class="report-filters">
+    <h3>فلاتر التقرير</h3>
+    <form method="GET" class="filter-form">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="month">الشهر:</label>
+                <select id="month" name="month">
+                    {% for i in range(1, 13) %}
+                    <option value="{{ i }}" {{ 'selected' if i == current_month }}>{{ i }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="year">السنة:</label>
+                <select id="year" name="year">
+                    {% for i in range(2023, 2025) %}
+                    <option value="{{ i }}" {{ 'selected' if i == current_year }}>{{ i }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="department_id">القسم:</label>
+                <select id="department_id" name="department_id">
+                    <option value="">جميع الأقسام</option>
+                    {% for department in departments %}
+                    <option value="{{ department.id }}" 
+                            {{ 'selected' if department.id == request.args.get('department_id')|int }}>
+                        {{ department.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-filter"></i> تطبيق الفلتر
+            </button>
+            <a href="{{ url_for('attendance_report') }}" class="btn btn-secondary">
+                <i class="fas fa-redo"></i> إعادة تعيين
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="report-section">
+    <h3>إحصائيات الحضور</h3>
+    
+    {% if report_data %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>رقم الموظف</th>
+                    <th>اسم الموظف</th>
+                    <th>الوظيفة</th>
+                    <th>القسم</th>
+                    <th>أيام الحضور</th>
+                    <th>أيام التأخير</th>
+                    <th>أيام الغياب</th>
+                    <th>معدل الحضور</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in report_data %}
+                <tr>
+                    <td>{{ record.employee_id }}</td>
+                    <td>{{ record.employee_name }}</td>
+                    <td>{{ record.position }}</td>
+                    <td>{{ record.department_name }}</td>
+                    <td>{{ record.days_present }}</td>
+                    <td>
+                        {% if record.days_late > 0 %}
+                        <span class="badge badge-warning">{{ record.days_late }}</span>
+                        {% else %}
+                        {{ record.days_late }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.days_absent > 0 %}
+                        <span class="badge badge-danger">{{ record.days_absent }}</span>
+                        {% else %}
+                        {{ record.days_absent }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set total_days = record.days_present + record.days_late + record.days_absent %}
+                        {% if total_days > 0 %}
+                            {% set attendance_rate = ((record.days_present / total_days) * 100)|round(1) %}
+                            <span class="badge badge-{{ 'success' if attendance_rate >= 90 else 'warning' if attendance_rate >= 80 else 'danger' }}">
+                                {{ attendance_rate }}%
+                            </span>
+                        {% else %}
+                            <span class="badge badge-secondary">0%</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-chart-bar fa-3x"></i>
+        <h4>لا توجد بيانات لعرضها</h4>
+        <p>لا توجد سجلات حضور تطابق معايير البحث.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.report-filters {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.report-filters h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 0.5rem;
+}
+
+.filter-form {
+    max-width: 600px;
+}
+
+.report-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.report-section h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 0.5rem;
+}
+
+.badge-danger {
+    background: #e74c3c;
+    color: white;
+}
+</style>
+{% endblock %}

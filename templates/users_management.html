@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة المستخدمين - نظام الموارد البشرية{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-users-cog"></i> إدارة المستخدمين</h1>
+    <a href="{{ url_for('add_user') }}" class="btn btn-primary">
+        <i class="fas fa-user-plus"></i> إضافة مستخدم جديد
+    </a>
+</div>
+
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>اسم المستخدم</th>
+                <th>البريد الإلكتروني</th>
+                <th>الموظف المرتبط</th>
+                <th>الصلاحية</th>
+                <th>الحالة</th>
+                <th>آخر دخول</th>
+                <th>تاريخ الإنشاء</th>
+                <th>الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>
+                    <strong>{{ user.username }}</strong>
+                    {% if user.employee_name %}
+                    <br><small>{{ user.employee_name }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ user.email or '---' }}</td>
+                <td>
+                    {% if user.employee_name %}
+                    <div class="employee-info">
+                        <strong>{{ user.employee_name }}</strong>
+                        <br>
+                        <small>{{ user.employee_position }}</small>
+                        {% if user.department_name %}
+                        <br>
+                        <small class="text-muted">{{ user.department_name }}</small>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <span class="text-muted">غير مرتبط</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-{{ 'danger' if user.role == 'admin' else 'warning' if user.role == 'manager' else 'secondary' }}">
+                        {{ 'مسؤول' if user.role == 'admin' else 'مدير' if user.role == 'manager' else 'مستخدم' }}
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge status-{{ 'active' if user.is_active else 'inactive' }}">
+                        {{ 'مفعل' if user.is_active else 'معطل' }}
+                    </span>
+                </td>
+                <td>
+                    {% if user.last_login %}
+                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                    {% else %}
+                        <span class="text-muted">لم يسجل دخول بعد</span>
+                    {% endif %}
+                </td>
+                <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    <div class="action-buttons">
+                        <a href="{{ url_for('edit_user', user_id=user.id) }}" 
+                           class="btn btn-sm btn-edit" title="تعديل">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        
+                        <button onclick="toggleUserStatus({{ user.id }})" 
+                                class="btn btn-sm btn-{{ 'warning' if user.is_active else 'success' }}"
+                                title="{{ 'تعطيل' if user.is_active else 'تفعيل' }}"
+                                {{ 'disabled' if user.id == session.user_id }}>
+                            <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
+                        </button>
+                        
+                        {% if user.username != 'admin' and user.id != session.user_id %}
+                        <button onclick="deleteUser({{ user.id }}, '{{ user.username }}')" 
+                                class="btn btn-sm btn-delete" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if not users %}
+<div class="empty-state">
+    <i class="fas fa-users fa-3x"></i>
+    <h3>لا يوجد مستخدمين</h3>
+    <p>لم يتم إضافة أي مستخدمين بعد. ابدأ بإضافة مستخدم جديد.</p>
+    <a href="{{ url_for('add_user') }}" class="btn btn-primary">
+        <i class="fas fa-user-plus"></i> إضافة أول مستخدم
+    </a>
+</div>
+{% endif %}
+
+<style>
+.employee-info {
+    line-height: 1.4;
+}
+
+.badge-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.badge-warning {
+    background: #f39c12;
+    color: white;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-warning {
+    background: #f39c12;
+    color: white;
+    border: none;
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: #e67e22;
+}
+
+.btn-warning:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+
+<script>
+function toggleUserStatus(userId) {
+    if (confirm('هل أنت متأكد من تغيير حالة المستخدم؟')) {
+        window.location.href = `/toggle_user_status/${userId}`;
+    }
+}
+
+function deleteUser(userId, username) {
+    if (confirm(`هل أنت متأكد من حذف المستخدم "${username}"؟\n\nهذا الإجراء لا يمكن التراجع عنه.`)) {
+        window.location.href = `/delete_user/${userId}`;
+    }
+}
+</script>
+{% endblock %}
