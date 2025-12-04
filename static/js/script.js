@@ -46,6 +46,7 @@ function renderCharts() {
   const departmentCtx = document
     .getElementById("departmentChart")
     .getContext("2d");
+
   const departmentChart = new Chart(departmentCtx, {
     type: "doughnut",
     data: {
@@ -64,31 +65,6 @@ function renderCharts() {
         legend: {
           position: "bottom",
           rtl: true,
-        },
-      },
-    },
-  });
-
-  // مخطط توزيع الرواتب
-  const salaryCtx = document.getElementById("salaryChart").getContext("2d");
-  const salaryChart = new Chart(salaryCtx, {
-    type: "bar",
-    data: {
-      labels: ["أقل من 10,000", "بين 10,000 و 20,000", "أكثر من 20,000"],
-      datasets: [
-        {
-          label: "عدد الموظفين",
-          data: [8, 15, 7],
-          backgroundColor: "#3498db",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
         },
       },
     },

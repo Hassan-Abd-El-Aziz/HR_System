@@ -12,29 +12,6 @@ endblock %} {% block content %}
   </div>
 </div>
 
-<div class="reports-controls">
-  <div class="filters">
-    <div class="filter-group">
-      <label for="departmentFilter">القسم:</label>
-      <select id="departmentFilter" onchange="filterReports()">
-        <option value="">جميع الأقسام</option>
-        {% for department in departments %}
-        <option value="{{ department.id }}">{{ department.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="filter-group">
-      <label for="dateFilter">الفترة:</label>
-      <select id="dateFilter" onchange="filterReports()">
-        <option value="all">جميع الفترات</option>
-        <option value="month">هذا الشهر</option>
-        <option value="quarter">هذا الربع</option>
-        <option value="year">هذه السنة</option>
-      </select>
-    </div>
-  </div>
-</div>
-
 <div class="reports-grid">
   <div class="report-card">
     <div class="card-header">
@@ -45,94 +22,6 @@ endblock %} {% block content %}
     </div>
     <div class="chart-summary" id="departmentSummary"></div>
   </div>
-
-  <div class="report-card">
-    <div class="card-header">
-      <h3><i class="fas fa-chart-bar"></i> توزيع الرواتب</h3>
-    </div>
-    <div class="chart-container">
-      <canvas id="salaryChart"></canvas>
-    </div>
-    <div class="chart-summary" id="salarySummary"></div>
-  </div>
-
-  <div class="report-card full-width">
-    <div class="card-header">
-      <h3><i class="fas fa-table"></i> إحصائيات مفصلة</h3>
-      <div class="card-actions">
-        <button class="btn btn-sm btn-secondary" onclick="exportTableToCSV()">
-          <i class="fas fa-download"></i> CSV
-        </button>
-      </div>
-    </div>
-    <div class="stats-table">
-      <table id="detailedStats">
-        <thead>
-          <tr>
-            <th>القسم</th>
-            <th>عدد الموظفين</th>
-            <th>متوسط الراتب</th>
-            <th>أعلى راتب</th>
-            <th>أقل راتب</th>
-            <th>إجمالي الرواتب</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for stat in department_stats %}
-          <tr>
-            <td>{{ stat.name }}</td>
-            <td>{{ stat.employee_count }}</td>
-            <!-- <td>{{ "%.2f"|format(stat.avg_salary) }} ر.س</td> -->
-            <td>{{ "%.2f"|format(stat.max_salary) }} ر.س</td>
-            <td>{{ "%.2f"|format(stat.min_salary) }} ر.س</td>
-            <td>
-              {{ "%.2f"|format(stat.avg_salary * stat.employee_count) }} ر.س
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr class="total-row">
-            <td><strong>المجموع</strong></td>
-            <td>
-              <strong
-                >{{ department_stats|sum(attribute='employee_count') }}</strong
-              >
-            </td>
-            <td>
-              <!-- <strong
-                >{{ "%.2f"|format(department_stats|sum(attribute='avg_salary') /
-                department_stats|length if department_stats|length > 0 else 0)
-                }} ر.س</strong -->
-              >
-            </td>
-            <td>
-              <strong
-                >{{
-                "%.2f"|format(department_stats|max(attribute='max_salary')|default(0))
-                }} ر.س</strong
-              >
-            </td>
-            <td>
-              <strong
-                >{{
-                "%.2f"|format(department_stats|min(attribute='min_salary')|default(0))
-                }} ر.س</strong
-              >
-            </td>
-            <td>
-              <!-- <strong
-                >{{ "%.2f"|format(department_stats|sum(attribute='avg_salary') *
-                department_stats|sum(attribute='employee_count')) }} ر.س</strong
-              > -->
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </div>
-
-  <!-- بطاقات إضافية -->
   <div class="report-card">
     <div class="card-header">
       <h3><i class="fas fa-users"></i> ملخص الموظفين</h3>
@@ -143,7 +32,7 @@ endblock %} {% block content %}
           <i class="fas fa-user-friends"></i>
         </div>
         <div class="stat-info">
-          <h4 id="totalEmployees">0</h4>
+          <h4 id="totalEmployees">{{ total_employees }}</h4>
           <p>إجمالي الموظفين</p>
         </div>
       </div>
@@ -152,17 +41,18 @@ endblock %} {% block content %}
           <i class="fas fa-user-check"></i>
         </div>
         <div class="stat-info">
-          <h4 id="activeEmployees">0</h4>
+          <h4 id="activeEmployees">{{ active_employees }}</h4>
           <p>موظفين نشطين</p>
         </div>
       </div>
       <div class="stat-item">
         <div class="stat-icon average-salary">
-          <i class="fas fa-money-bill-wave"></i>
+          <i class="fas fa-chart-line"></i>
         </div>
         <div class="stat-info">
-          <h4 id="averageSalary">0</h4>
-          <p>متوسط الراتب</p>
+          <h3>{{ attendance_rate }}%</h3>
+          <p>معدل التواجد</p>
+          <small>نسبة الموظفين النشطين</small>
         </div>
       </div>
       <div class="stat-item">
@@ -170,21 +60,137 @@ endblock %} {% block content %}
           <i class="fas fa-building"></i>
         </div>
         <div class="stat-info">
-          <h4 id="departmentsCount">0</h4>
+          <h4 id="departmentsCount">{{ total_departments }}</h4>
           <p>عدد الأقسام</p>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="report-card">
+  <!-- <div class="report-card">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-bar"></i> توزيع الرواتب</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="salaryChart"></canvas>
+    </div>
+    <div class="chart-summary" id="salarySummary"></div>
+  </div> -->
+
+  <div class="report-card full-width">
+    <div class="card-header">
+      <h3><i class="fas fa-table"></i> إحصائيات مفصلة</h3>
+      <div class="card-actions">
+        <button class="btn btn-sm btn-secondary" onclick="exportTableToCSV()">
+          <i class="fas fa-download"></i> CSV
+        </button>
+      </div>
+    </div>
+    <div class="reports-controls">
+      <div class="filters">
+        <select id="departmentFilter" class="filter-select">
+          <option value="">جميع الأقسام</option>
+          {% for dept in departments %}
+          <option id="dep-val" value="{{ dept.id }}">{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+
+        <select id="statusFilter" class="filter-select">
+          <option value="">جميع الحالات</option>
+          <option value="active">نشط</option>
+          <option value="inactive">غير نشط</option>
+        </select>
+
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="بحث في الموظفين..."
+          class="search-input"
+        />
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table" id="data-table">
+        <thead>
+          <tr>
+            <th>صورة الموظف</th>
+            <th>رقم الموظف</th>
+            <th>الاسم</th>
+            <th>البريد الإلكتروني</th>
+            <th>القسم</th>
+            <th>الوظيفة</th>
+            <th>الراتب</th>
+            <th>الحالة</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for employee in employees %}
+          <tr
+            data-department="{{ employee.department_id }}"
+            data-status="{{ employee.status }}"
+          >
+            <td>
+              <div class="employee-avatar">
+                {% if employee.profile_picture_url %}
+                <img
+                  src="{{ url_for('uploaded_file', filename=employee.profile_picture_url) }}"
+                  alt="{{ employee.first_name }} {{ employee.last_name }}"
+                  class="employee-thumbnail"
+                />
+                {% else %}
+                <i class="fas fa-user-circle"></i>
+                {% endif %}
+              </div>
+            </td>
+            <td>{{ employee.employee_id }}</td>
+            <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+            <td>{{ employee.email }}</td>
+            <td>{{ employee.department_name }}</td>
+            <td>{{ employee.position }}</td>
+            <td>{{ "{:,.2f}".format(employee.salary) }} ر.س</td>
+            <td>
+              <span class="status-badge status-{{ employee.status }}">
+                {% if employee.status == 'active' %}نشط{% else %}غير نشط{% endif
+                %}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <a
+                  href="{{ url_for('edit_employee', employee_id=employee.id) }}"
+                  class="btn btn-sm btn-edit"
+                  title="تعديل"
+                >
+                  <i class="fas fa-edit"></i>
+                </a>
+                <a
+                  href="{{ url_for('delete_employee', employee_id=employee.id) }}"
+                  class="btn btn-sm btn-delete"
+                  onclick="return confirm('هل أنت متأكد من حذف الموظف {{ employee.first_name }} {{ employee.last_name }}؟')"
+                  title="حذف"
+                >
+                  <i class="fas fa-trash"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- بطاقات إضافية -->
+
+  <!-- <div class="report-card">
     <div class="card-header">
       <h3><i class="fas fa-chart-line"></i> اتجاهات التوظيف</h3>
     </div>
     <div class="chart-container">
       <canvas id="hiringTrendChart"></canvas>
     </div>
-  </div>
+  </div> -->
 </div>
 
 <!-- ستايلات إضافية -->
@@ -251,6 +257,10 @@ endblock %} {% block content %}
     grid-column: 1 / -1;
   }
 
+  .search-input {
+    flex: 1;
+    min-width: 200px;
+  }
   .card-header {
     display: flex;
     justify-content: space-between;
@@ -283,33 +293,41 @@ endblock %} {% block content %}
     color: #495057;
   }
 
-  .stats-table {
-    overflow-x: auto;
+  .employee-thumbnail {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #3498db;
+  }
+  /* الجداول */
+  .table-container {
+    background: white;
+    border-radius: 10px;
+    overflow-x: scroll;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
   }
 
-  .stats-table table {
+  .data-table {
     width: 100%;
     border-collapse: collapse;
   }
 
-  .stats-table th {
-    background: #f8f9fa;
+  .data-table th,
+  .data-table td {
     padding: 1rem;
-    text-align: right;
-    font-weight: 600;
-    color: #2c3e50;
-    border-bottom: 2px solid #dee2e6;
+    text-align: center;
+    border-bottom: 1px solid #ecf0f1;
   }
 
-  .stats-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #e9ecef;
-    text-align: right;
+  .data-table th {
+    background: #34495e;
+    color: white;
+    font-weight: 600;
   }
 
-  .stats-table tfoot {
+  .data-table tr:hover {
     background: #f8f9fa;
-    font-weight: 600;
   }
 
   .total-row td {
@@ -417,8 +435,6 @@ endblock %} {% block content %}
   // تحميل جميع الرسوم البيانية
   async function loadAllCharts() {
     await loadDepartmentChart();
-    await loadSalaryChart();
-    await loadHiringTrendChart();
   }
 
   // رسم بياني لتوزيع الموظفين حسب الأقسام
@@ -474,188 +490,11 @@ endblock %} {% block content %}
       // تحديث الملخص
       const total = data.data.reduce((a, b) => a + b, 0);
       document.getElementById("departmentSummary").innerHTML = `
-      <strong>إجمالي الموظفين:</strong> ${total} موظف<br>
-      <strong>عدد الأقسام:</strong> ${data.labels.length} قسم
-    `;
+        <strong>إجمالي الموظفين:</strong> ${total} موظف<br>
+        <strong>عدد الأقسام:</strong> ${data.labels.length} قسم
+      `;
     } catch (error) {
       console.error("Error loading department chart:", error);
-    }
-  }
-
-  // رسم بياني لتوزيع الرواتب
-  async function loadSalaryChart() {
-    try {
-      const response = await fetch("/api/reports/salary-distribution");
-      const data = await response.json();
-
-      const ctx = document.getElementById("salaryChart").getContext("2d");
-
-      if (salaryChartInstance) {
-        salaryChartInstance.destroy();
-      }
-
-      salaryChartInstance = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: data.labels,
-          datasets: [
-            {
-              label: "عدد الموظفين",
-              data: data.data,
-              backgroundColor: "#3498db",
-              borderColor: "#2980b9",
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: "عدد الموظفين",
-              },
-            },
-            x: {
-              title: {
-                display: true,
-                text: "نطاق الراتب",
-              },
-            },
-          },
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              rtl: true,
-              callbacks: {
-                label: function (context) {
-                  return `عدد الموظفين: ${context.raw}`;
-                },
-              },
-            },
-          },
-        },
-      });
-
-      // تحديث ملخص الرواتب
-      const totalEmployees = data.data.reduce((a, b) => a + b, 0);
-      document.getElementById("salarySummary").innerHTML = `
-      <strong>إجمالي الموظفين:</strong> ${totalEmployees}<br>
-      <strong>أعلى شريحة:</strong> ${
-        data.labels[data.data.indexOf(Math.max(...data.data))]
-      }
-    `;
-    } catch (error) {
-      console.error("Error loading salary chart:", error);
-    }
-  }
-
-  // رسم بياني لاتجاهات التوظيف
-  async function loadHiringTrendChart() {
-    try {
-      // هنا يمكنك إضافة API endpoint لبيانات اتجاهات التوظيف
-      // للتبسيط، سنستخدم بيانات وهمية حالياً
-      const ctx = document.getElementById("hiringTrendChart").getContext("2d");
-
-      if (hiringTrendChartInstance) {
-        hiringTrendChartInstance.destroy();
-      }
-
-      // بيانات وهمية للعرض
-      const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"];
-      const hiringData = [5, 8, 12, 7, 10, 15];
-
-      hiringTrendChartInstance = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: months,
-          datasets: [
-            {
-              label: "عدد التوظيفات",
-              data: hiringData,
-              backgroundColor: "rgba(52, 152, 219, 0.2)",
-              borderColor: "#3498db",
-              borderWidth: 2,
-              fill: true,
-              tension: 0.4,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: "عدد التوظيفات",
-              },
-            },
-            x: {
-              title: {
-                display: true,
-                text: "الشهر",
-              },
-            },
-          },
-          plugins: {
-            legend: {
-              display: true,
-              position: "top",
-              rtl: true,
-            },
-          },
-        },
-      });
-    } catch (error) {
-      console.error("Error loading hiring trend chart:", error);
-    }
-  }
-
-  // تحديث إحصائيات الملخص
-  async function updateSummaryStats() {
-    try {
-      const response = await fetch("/api/reports/summary");
-      const data = await response.json();
-
-      document.getElementById("totalEmployees").textContent =
-        data.total_employees;
-      document.getElementById("activeEmployees").textContent =
-        data.active_employees;
-      document.getElementById("averageSalary").textContent =
-        data.average_salary.toFixed(2);
-      document.getElementById("departmentsCount").textContent =
-        data.departments_count;
-    } catch (error) {
-      // إذا لم يكن الـ API موجوداً، استخدم البيانات من الجدول
-      const rows = document.querySelectorAll("#detailedStats tbody tr");
-      let totalEmployees = 0;
-      let totalSalary = 0;
-      let departments = new Set();
-
-      rows.forEach((row) => {
-        const cells = row.querySelectorAll("td");
-        const employeeCount = parseInt(cells[1].textContent);
-        const avgSalary = parseFloat(cells[2].textContent);
-
-        totalEmployees += employeeCount;
-        totalSalary += avgSalary * employeeCount;
-        departments.add(cells[0].textContent);
-      });
-
-      document.getElementById("totalEmployees").textContent = totalEmployees;
-      document.getElementById("activeEmployees").textContent = totalEmployees; // نفترض جميعهم نشطين للتبسيط
-      document.getElementById("averageSalary").textContent = (
-        totalSalary / totalEmployees || 0
-      ).toFixed(2);
-      document.getElementById("departmentsCount").textContent =
-        departments.size;
     }
   }
 
@@ -663,7 +502,24 @@ endblock %} {% block content %}
   function filterReports() {
     const department = document.getElementById("departmentFilter").value;
     const period = document.getElementById("dateFilter").value;
+    const tableRows = document.querySelectorAll(".data-table tbody tr");
 
+    tableRows.forEach((row) => {
+      const department = row.getAttribute("data-department");
+      const status = row.getAttribute("data-status");
+      const rowText = row.textContent.toLowerCase();
+
+      const departmentMatch =
+        !departmentValue || department === departmentValue;
+      const statusMatch = !statusValue || status === statusValue;
+      const searchMatch = !searchValue || rowText.includes(searchValue);
+
+      if (departmentMatch && statusMatch && searchMatch) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
     // هنا يمكنك إضافة منطق الفلترة
     // يمكنك إعادة تحميل البيانات مع معلمات الفلترة
     console.log("Filtering by:", { department, period });
@@ -684,7 +540,7 @@ endblock %} {% block content %}
 
   // تصدير الجدول إلى CSV
   function exportTableToCSV() {
-    const table = document.getElementById("detailedStats");
+    const table = document.getElementById("data-table");
     const rows = table.querySelectorAll("tr");
     const csv = [];
 
@@ -715,21 +571,21 @@ endblock %} {% block content %}
   // إضافة API endpoint إضافي في حالة عدم وجوده
   // يمكنك إضافته في Flask route
   /*
-@app.route('/api/reports/summary')
-def reports_summary():
-    total_employees = db.session.query(func.count(Employee.id)).scalar() or 0
-    active_employees = db.session.query(func.count(Employee.id)).filter(
-        Employee.status == 'active'
-    ).scalar() or 0
-    average_salary = db.session.query(func.avg(Employee.salary)).scalar() or 0
-    departments_count = db.session.query(func.count(Department.id)).scalar() or 0
-    
-    return jsonify({
-        'total_employees': total_employees,
-        'active_employees': active_employees,
-        'average_salary': float(average_salary),
-        'departments_count': departments_count
-    })
-*/
+  @app.route('/api/reports/summary')
+  def reports_summary():
+      total_employees = db.session.query(func.count(Employee.id)).scalar() or 0
+      active_employees = db.session.query(func.count(Employee.id)).filter(
+          Employee.status == 'active'
+      ).scalar() or 0
+      average_salary = db.session.query(func.avg(Employee.salary)).scalar() or 0
+      departments_count = db.session.query(func.count(Department.id)).scalar() or 0
+
+      return jsonify({
+          'total_employees': total_employees,
+          'active_employees': active_employees,
+          'average_salary': float(average_salary),
+          'departments_count': departments_count
+      })
+  */
 </script>
 {% endblock %}

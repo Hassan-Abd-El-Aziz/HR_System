@@ -335,6 +335,7 @@ def employees():
     except Exception as e:
         flash(f'حدث خطأ: {str(e)}', 'error')
         return render_template('employees.html', employees=[], departments=[])
+    
 @app.route('/add_employee', methods=['GET', 'POST'])
 @login_required
 @permission_required('employees', 'create')
@@ -491,6 +492,7 @@ def edit_employee(employee_id):
             birth_date = request.form.get('birth_date') or None
             gender = request.form.get('gender', '')
             status = request.form['status']
+            
             
             cursor = conn.cursor()
             cursor.execute('''
@@ -1115,55 +1117,71 @@ def reports():
     """صفحة التقارير"""
     conn = get_db_connection()
 
-    
     if not conn:
         flash('خطأ في الاتصال بقاعدة البيانات', 'error')
         return render_template('reports.html', 
-                             department_id=[], 
-                             salary_stats=[])
+                             total_employees=0, 
+                             total_departments=0, 
+                             active_employees=0,
+                             attendance_rate=0)
     
     try:
         cursor = conn.cursor()
         
-        # تقرير توزيع الموظفين حسب الأقسام
-        cursor.execute('''
-            SELECT d.name, COUNT(e.id) as employee_count
-            FROM Departments d 
-            LEFT JOIN Employees e ON d.id = e.department_id 
-            GROUP BY d.id, d.name
-        ''')
-        department_stats = cursor.fetchall()
+        # إحصائيات سريعة
+        cursor.execute('SELECT COUNT(*) FROM Employees')
+        total_employees = cursor.fetchone()[0] or 0
         
-        # تقرير توزيع الرواتب
-        cursor.execute('''
-            SELECT 
-                COUNT(*) as count,
-                CASE 
-                    WHEN salary < 10000 THEN 'أقل من 10,000'
-                    WHEN salary BETWEEN 10000 AND 20000 THEN 'بين 10,000 و 20,000'
-                    ELSE 'أكثر من 20,000'
-                END as salary_range
-            FROM Employees 
-            GROUP BY 
-                CASE 
-                    WHEN salary < 10000 THEN 'أقل من 10,000'
-                    WHEN salary BETWEEN 10000 AND 20000 THEN 'بين 10,000 و 20,000'
-                    ELSE 'أكثر من 20,000'
-                END
-        ''')
-        salary_stats = cursor.fetchall()
+        cursor.execute('SELECT COUNT(*) FROM Departments')
+        total_departments = cursor.fetchone()[0] or 0
         
+        cursor.execute("SELECT COUNT(*) FROM Employees WHERE status = 'active'")
+        active_employees = cursor.fetchone()[0] or 0
+        
+        cursor.execute('''
+            SELECT e.*, d.name as department_name 
+            FROM Employees e 
+            LEFT JOIN Departments d ON e.department_id = d.id
+            ORDER BY e.created_at DESC
+        ''')
+        employees = cursor.fetchall()
+
+
+        # حساب معدل التواجد المبسط
+        if total_employees > 0:
+            attendance_rate = round((active_employees / total_employees) * 100, 1)
+        else:
+            attendance_rate = 0
+        
+            # جلب قائمة الأقسام للنموذج
+      
+        cursor.execute('SELECT id, name FROM Departments')
+        departments = cursor.fetchall()
         conn.close()
         
         return render_template('reports.html', 
-                             department_stats=department_stats,
-                             salary_stats=salary_stats)
+                             total_employees=total_employees,
+                             total_departments=total_departments,
+                             active_employees=active_employees,
+                             attendance_rate=attendance_rate,
+                             departments=departments,
+                             employees=employees,
+                            )
                              
     except Exception as e:
         flash(f'حدث خطأ: {str(e)}', 'error')
         return render_template('reports.html', 
-                             department_stats=[], 
-                             salary_stats=[])
+                             total_employees=0, 
+                             total_departments=0, 
+                             active_employees=0,
+                             attendance_rate=0,
+                             departments=0)                             
+
+
+# ==================== chart API ====================
+
+
+
 
 
 # ==================== مسارات API ====================

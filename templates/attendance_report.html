@@ -23,7 +23,7 @@
             <div class="form-group">
                 <label for="year">السنة:</label>
                 <select id="year" name="year">
-                    {% for i in range(2023, 2025) %}
+                    {% for i in range(2020, 2050) %}
                     <option value="{{ i }}" {{ 'selected' if i == current_year }}>{{ i }}</option>
                     {% endfor %}
                 </select>
