@@ -341,15 +341,14 @@ def employees():
 @permission_required('employees', 'create')
 def add_employee():
     """إضافة موظف جديد"""
+    conn = None  # تعريف المتغير خارج كتلة try
     if request.method == 'POST':
-        conn = get_db_connection()
-        if not conn:
-            flash('خطأ في الاتصال بقاعدة البيانات', 'error')
-            return redirect(url_for('add_employee'))
-        
         try:
+            conn = get_db_connection()
+            if not conn:
+                raise pyodbc.Error("فشل الاتصال بقاعدة البيانات")
+
             cursor = conn.cursor()
-            
             # إنشاء معرف موظف تلقائي
             cursor.execute('SELECT COUNT(*) FROM Employees')
             count = cursor.fetchone()[0]
@@ -365,27 +364,54 @@ def add_employee():
             position = request.form['position']
             salary = float(request.form['salary'])
             hire_date = request.form['hire_date']
-            birth_date = request.form.get('birth_date') or None
+            birth_date = request.form.get('birth_date') if request.form.get('birth_date') else None
             gender = request.form.get('gender', '')
-            
+            status = request.form.get('status', '')
+            national_number = request.form.get('national_number', '')
+            ReleaseDate = request.form.get('release_date') if request.form.get('release_date') else None
+            LicenseIssuanceDate_str = request.form.get('license_date') if request.form.get('license_date') else None
+            LicenseType = request.form.get('license_type', '')
+            AcademicQualification=request.form.get('academic_qualification', '')
+            GraduationDate=request.form.get('graduation_date') if request.form.get('graduation_date') else None
+            Appreciation=request.form.get('appreciation', '')
+            InsuranceNumber=request.form.get('insurance_number', '')
+            BankAccountNumber=request.form.get('bank_account_number', '')
+            SalaryDisbursementMethod=request.form.get('salary_disbursement_method', '')
+            ContractType=request.form.get('contract_type', '')
+            ContractStart=request.form.get('contract_start') if request.form.get('contract_start') else None
+            ContractEnd=request.form.get('contract_end') if request.form.get('contract_end') else None
+
+            # --- إعادة ترتيب منطق حساب تاريخ انتهاء الرخصة ---
+            LicenseExpiryDate_str = None
+            if LicenseIssuanceDate_str and LicenseType:
+                LicenseIssuanceDate_obj = datetime.strptime(LicenseIssuanceDate_str, "%Y-%m-%d")
+                if LicenseType == 'خاصة':
+                    LicenseExpiryDate_obj = LicenseIssuanceDate_obj.replace(year=LicenseIssuanceDate_obj.year + 10)
+                    LicenseExpiryDate_str = LicenseExpiryDate_obj.strftime("%Y-%m-%d")
+                elif LicenseType == 'مهنية':
+                    LicenseExpiryDate_obj = LicenseIssuanceDate_obj.replace(year=LicenseIssuanceDate_obj.year + 5)
+                    LicenseExpiryDate_str = LicenseExpiryDate_obj.strftime("%Y-%m-%d")
+
             # إدخال الموظف الجديد والحصول على ID
             cursor.execute('''
                 INSERT INTO Employees 
                 (employee_id, first_name, last_name, email, phone, address, 
-                 department_id, position, salary, hire_date, birth_date, gender, status)
-                OUTPUT INSERTED.id
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+                 department_id, position, salary, hire_date, birth_date, gender, status,
+                 national_number, ReleaseDate, LicenseIssuanceDate, LicenseType,
+                 LicenseExpiryDate, AcademicQualification, GraduationDate, Appreciation, 
+                 InsuranceNumber, BankAccountNumber, SalaryDisbursementMethod, 
+                 ContractType, ContractStart, ContractEnd)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (employee_id, first_name, last_name, email, phone, address,
-                  department_id, position, salary, hire_date, birth_date, gender))
-            
-            # الحصول على ID الموظف المضاف باستخدام OUTPUT
-            row = cursor.fetchone()
-            if row:
-                employee_id_db = row[0]
-            else:
-                # إذا لم يدعم OUTPUT، نستخدم SELECT SCOPE_IDENTITY()
-                cursor.execute('SELECT SCOPE_IDENTITY()')
-                employee_id_db = cursor.fetchone()[0]
+                  department_id, position, salary, hire_date, birth_date, 
+                  gender, status, national_number, ReleaseDate, LicenseIssuanceDate_str,
+                  LicenseType, LicenseExpiryDate_str, AcademicQualification,
+                  GraduationDate, Appreciation, InsuranceNumber, BankAccountNumber, 
+                  SalaryDisbursementMethod, ContractType, ContractStart, ContractEnd))
+
+            # الحصول على ID الموظف المضاف للتو (الطريقة الأكثر أماناً)
+            cursor.execute("SELECT SCOPE_IDENTITY();")
+            employee_id_db = cursor.fetchone()[0]
             
             # معالجة الصورة الشخصية إذا تم رفعها
             if 'profile_photo' in request.files:
@@ -445,19 +471,24 @@ def add_employee():
                             ))
             
             conn.commit()
-            conn.close()
             
             flash('تم إضافة الموظف بنجاح مع الملفات المرفوعة', 'success')
             return redirect(url_for('employees'))
             
         except Exception as e:
-            conn.rollback()
-            conn.close()
+            if conn:
+                conn.rollback()
             print(f"Error adding employee: {str(e)}")  # للتصحيح
             flash(f'حدث خطأ أثناء إضافة الموظف: {str(e)}', 'error')
+        finally:
+            if conn:
+                conn.close()
     
     # جلب قائمة الأقسام للنموذج
     conn = get_db_connection()
+    if not conn:
+        flash('خطأ في الاتصال بقاعدة البيانات لجلب الأقسام', 'error')
+        return render_template('add_employee.html', departments=[], today=date.today().isoformat())
     cursor = conn.cursor()
     cursor.execute('SELECT id, name FROM Departments')
     departments = cursor.fetchall()

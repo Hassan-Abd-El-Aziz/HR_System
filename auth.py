@@ -26,12 +26,11 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('يجب تسجيل الدخول أولاً', 'error')
-            return redirect(url_for('auth.login'))
+        # هذا الديكور يفترض أن `login_required` قد تم استخدامه بالفعل قبله
+        # أو يتم التحقق من تسجيل الدخول داخله
         if session.get('role') != 'admin':
             flash('ليس لديك صلاحية للوصول إلى هذه الصفحة', 'error')
-            return redirect(url_for('index'))
+            return redirect(url_for('index')) # أو أي صفحة مناسبة أخرى
         return f(*args, **kwargs)
     return decorated_function
 
@@ -39,6 +38,7 @@ def admin_required(f):
 def get_db_connection():
     try:
         connection_string = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=.\\SQLEXPRESS;DATABASE=HR_System;UID=sa;PWD=admin'
+        # ملاحظة: من الأفضل نقل سلسلة الاتصال إلى ملف إعدادات خارجي
         conn = pyodbc.connect(connection_string)
         return conn
     except Exception as e:
@@ -53,51 +53,36 @@ def login():
         password = request.form['password']
         remember_me = 'remember_me' in request.form
         
-        conn = get_db_connection()
-        if not conn:
-            flash('خطأ في الاتصال بقاعدة البيانات', 'error')
+        user = None
+        try:
+            with get_db_connection() as conn:
+                if conn is None:
+                    raise pyodbc.Error("فشل الاتصال بقاعدة البيانات")
+                with conn.cursor() as cursor:
+                    cursor.execute('''
+                        SELECT id, username, password_hash, role, employee_id, is_active 
+                        FROM Users 
+                        WHERE username = ? AND is_active = 1
+                    ''', (username,))
+                    user = cursor.fetchone()
+        except pyodbc.Error as e:
+            print(f"❌ خطأ في قاعدة البيانات: {e}")
+            flash('حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.', 'error')
             return render_template('login.html')
-            
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT id, username, password_hash, role, employee_id, is_active 
-            FROM Users 
-            WHERE username = ? AND is_active = 1
-        ''', (username,))
-        user = cursor.fetchone()
-        conn.close()
-        
-        # للاختبار فقط - سيكون لديك كلمات مرور مشفرة في قاعدة البيانات
-        if user and user.password_hash.startswith('scrypt:'):
-            # هنا سيتم فك التشفير في الإصدار النهائي
-            if password == 'admin' and username == 'admin':
-                session['user_id'] = user.id
-                session['username'] = user.username
-                session['role'] = user.role
-                flash(f'مرحباً بك {username}!', 'success')
-                return redirect(url_for('index'))
-            elif password == 'user' and username == 'user':
-                session['user_id'] = user.id
-                session['username'] = user.username
-                session['role'] = user.role
-                flash(f'مرحباً بك {username}!', 'success')
-                return redirect(url_for('index'))
+
+        if user and check_password(user.password_hash, password):
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session['role'] = user.role
+            session['employee_id'] = user.employee_id
+            if remember_me:
+                session.permanent = True # لجعل الجلسة دائمة
+
+            flash(f'مرحباً بك مجدداً، {user.username}!', 'success')
+            return redirect(url_for('index')) # أو أي صفحة رئيسية أخرى
         else:
-            # للاختبار - إذا لم توجد كلمات مرور مشفرة
-            if username == 'admin' and password == 'admin':
-                session['user_id'] = 1
-                session['username'] = 'admin'
-                session['role'] = 'admin'
-                flash('مرحباً بك مسؤول!', 'success')
-                return redirect(url_for('index'))
-            elif username == 'user' and password == 'user':
-                session['user_id'] = 2
-                session['username'] = 'user'
-                session['role'] = 'user'
-                flash('مرحباً بك!', 'success')
-                return redirect(url_for('index'))
-        
-        flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'error')
+            # فشل تسجيل الدخول
+            flash('اسم المستخدم أو كلمة المرور غير صحيحة أو الحساب غير نشط.', 'error')
     
     return render_template('login.html')
 
