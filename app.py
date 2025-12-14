@@ -378,6 +378,7 @@ def add_employee():
             BankAccountNumber=request.form.get('bank_account_number', '')
             SalaryDisbursementMethod=request.form.get('salary_disbursement_method', '')
             ContractType=request.form.get('contract_type', '')
+            profile_picture_url= request.form.get('profile_photo', '')
             ContractStart=request.form.get('contract_start') if request.form.get('contract_start') else None
             ContractEnd=request.form.get('contract_end') if request.form.get('contract_end') else None
 
@@ -441,6 +442,7 @@ def add_employee():
                 'id_file': 'هوية',
                 'certificate_file': 'شهادات'
             }
+            files_uploaded = False
             
             for field in file_fields:
                 if field in request.files:
@@ -451,6 +453,7 @@ def add_employee():
                             unique_filename = f"{employee_id_db}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
                             file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'documents', unique_filename)
                             
+                            files_uploaded = True
                             # إنشاء المجلد إذا لم يكن موجوداً
                             os.makedirs(os.path.dirname(file_path), exist_ok=True)
                             file.save(file_path)
@@ -472,7 +475,10 @@ def add_employee():
             
             conn.commit()
             
-            flash('تم إضافة الموظف بنجاح مع الملفات المرفوعة', 'success')
+            if files_uploaded:
+                flash('تم إضافة الموظف بنجاح مع الملفات المرفوعة', 'success')
+            else:
+                flash('تم إضافة الموظف بنجاح', 'success')
             return redirect(url_for('employees'))
             
         except Exception as e:
@@ -511,6 +517,7 @@ def edit_employee(employee_id):
     
     if request.method == 'POST':
         try:
+            # استقبال كافة البيانات من النموذج
             first_name = request.form['first_name']
             last_name = request.form['last_name']
             email = request.form['email']
@@ -520,21 +527,51 @@ def edit_employee(employee_id):
             position = request.form['position']
             salary = float(request.form['salary'])
             hire_date = request.form['hire_date']
-            birth_date = request.form.get('birth_date') or None
+            birth_date = request.form.get('birth_date') if request.form.get('birth_date') else None
             gender = request.form.get('gender', '')
-            status = request.form['status']
-            
+            status = request.form.get('status', '')
+            national_number = request.form.get('national_number', '')
+            ReleaseDate = request.form.get('release_date') if request.form.get('release_date') else None
+            LicenseIssuanceDate_str = request.form.get('license_date') if request.form.get('license_date') else None
+            LicenseType = request.form.get('license_type', '')
+            AcademicQualification = request.form.get('academic_qualification', '')
+            GraduationDate = request.form.get('graduation_date') if request.form.get('graduation_date') else None
+            Appreciation = request.form.get('appreciation', '')
+            InsuranceNumber = request.form.get('insurance_number', '')
+            profile_picture_url= request.form.get('profile_photo', '')
+            BankAccountNumber = request.form.get('bank_account_number', '')
+            SalaryDisbursementMethod = request.form.get('salary_disbursement_method', '')
+            ContractType = request.form.get('contract_type', '')
+            ContractStart = request.form.get('contract_start') if request.form.get('contract_start') else None
+            ContractEnd = request.form.get('contract_end') if request.form.get('contract_end') else None
+
+            # إعادة حساب تاريخ انتهاء الرخصة عند التعديل
+            LicenseExpiryDate_str = None
+            if LicenseIssuanceDate_str and LicenseType:
+                LicenseIssuanceDate_obj = datetime.strptime(LicenseIssuanceDate_str, "%Y-%m-%d")
+                if LicenseType == 'خاصة':
+                    LicenseExpiryDate_obj = LicenseIssuanceDate_obj.replace(year=LicenseIssuanceDate_obj.year + 10)
+                    LicenseExpiryDate_str = LicenseExpiryDate_obj.strftime("%Y-%m-%d")
+                elif LicenseType == 'مهنية':
+                    LicenseExpiryDate_obj = LicenseIssuanceDate_obj.replace(year=LicenseIssuanceDate_obj.year + 5)
+                    LicenseExpiryDate_str = LicenseExpiryDate_obj.strftime("%Y-%m-%d")
             
             cursor = conn.cursor()
             cursor.execute('''
                 UPDATE Employees 
-                SET first_name=?, last_name=?, email=?, phone=?, address=?, 
-                    department_id=?, position=?, salary=?, hire_date=?, 
-                    birth_date=?, gender=?, status=?, updated_at=GETDATE()
+                SET first_name=?, last_name=?, email=?, phone=?, address=?, department_id=?, 
+                    position=?, salary=?, hire_date=?, birth_date=?, gender=?, status=?,
+                    national_number=?, ReleaseDate=?, LicenseIssuanceDate=?, LicenseType=?,
+                    LicenseExpiryDate=?, AcademicQualification=?, GraduationDate=?, Appreciation=?, 
+                    InsuranceNumber=?, BankAccountNumber=?, SalaryDisbursementMethod=?, 
+                    ContractType=?, ContractStart=?, ContractEnd=?, updated_at=GETDATE()
                 WHERE id=?
-            ''', (first_name, last_name, email, phone, address,
-                  department_id, position, salary, hire_date,
-                  birth_date, gender, status, employee_id))
+            ''', (first_name, last_name, email, phone, address, department_id,
+                  position, salary, hire_date, birth_date, gender, status,
+                  national_number, ReleaseDate, LicenseIssuanceDate_str, LicenseType,
+                  LicenseExpiryDate_str, AcademicQualification, GraduationDate, Appreciation,
+                  InsuranceNumber, BankAccountNumber, SalaryDisbursementMethod,
+                  ContractType, ContractStart, ContractEnd, employee_id))
             
             conn.commit()
             conn.close()
